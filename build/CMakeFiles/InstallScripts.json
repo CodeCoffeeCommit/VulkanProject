@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/Github/VulkanProject/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
