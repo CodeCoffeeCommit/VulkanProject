@@ -1,10 +1,10 @@
 #include "Renderer.h"
 #include "VulkanContext.h"
 #include "SwapChain.h"
+#include "GraphicsPipeline.h"
 #include <iostream>
 #include <stdexcept>
 #include <array>
-#include "GraphicsPipeline.h"
 
 Renderer::Renderer() {
 }
@@ -39,7 +39,16 @@ void Renderer::cleanup() {
 
     // Cleanup sync objects
     for (size_t i = 0; i < imageAvailableSemaphores.size(); i++) {
-        // ... rest of cleanup
+        vkDestroySemaphore(context->getDevice(), imageAvailableSemaphores[i], nullptr);
+        vkDestroySemaphore(context->getDevice(), renderFinishedSemaphores[i], nullptr);
+        vkDestroyFence(context->getDevice(), inFlightFences[i], nullptr);
+    }
+
+    // Cleanup command pool
+    if (commandPool != VK_NULL_HANDLE) {
+        vkDestroyCommandPool(context->getDevice(), commandPool, nullptr);
+    }
+}
 
 void Renderer::drawFrame() {
     // Wait for previous frame to finish

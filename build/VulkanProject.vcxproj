@@ -414,10 +414,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="C:\Github\VulkanProject\src\main.cpp" />
+    <ClCompile Include="C:\Github\VulkanProject\src\render\VulkanContext.cpp" />
     <ClCompile Include="C:\Github\VulkanProject\src\render\GraphicsPipeline.cpp" />
     <ClCompile Include="C:\Github\VulkanProject\src\render\Renderer.cpp" />
     <ClCompile Include="C:\Github\VulkanProject\src\render\SwapChain.cpp" />
-    <ClCompile Include="C:\Github\VulkanProject\src\render\VulkanContext.cpp" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
