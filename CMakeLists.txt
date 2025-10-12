@@ -15,7 +15,7 @@ find_package(Vulkan REQUIRED)
 find_package(glfw3 REQUIRED)
 
 # Add executable
-add_executable(VulkanProject src/main.cpp)
+add_executable(VulkanProject src/main.cpp "src/render/VulkanContext.h" "src/render/VulkanContext.cpp")
 
 # Link libraries
 target_link_libraries(VulkanProject 
