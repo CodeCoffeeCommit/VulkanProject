@@ -1,32 +1,26 @@
-# Updated Roadmap - Custom UI Framework for Liberation
+Roadmap - Custom UI Framework
 
-## 🎯 Mission Statement
+ROADMAP - Focused & Practical
 
-**Build a completely libre DCC tool with zero corporate dependencies. Every line of code, every library, every tool must be truly free. This is liberation technology.**
+PHASE 1: FOUNDATION (Weeks 1-2)
 
----
+Week 1: Vulkan 3D Rendering Pipeline
 
-## 📅 REVISED ROADMAP - Focused & Practical
-
-### **PHASE 1: FOUNDATION (Weeks 1-2)**
-
-#### Week 1: Vulkan 3D Rendering Pipeline
-
-**Day 1-2: Vulkan Instance & Device Setup** ⭐ **← YOU ARE HERE**
+Day 1-2: Vulkan Instance & Device Setup
 - Initialize Vulkan instance
 - Enable validation layers (catch errors early)
 - Select physical device (GPU)
 - Create logical device & queues
 - **Deliverable:** Console shows "Vulkan initialized successfully"
 
-**Day 3-4: Clear Screen to Color**
+Day 3-4: Clear Screen to Color
 - Create swap chain
 - Create render pass
 - Create framebuffers
 - Record command buffer that clears screen
-- **Deliverable:** Window shows solid color (not white!)
+- Deliverable:
 
-**Day 5-7: First Triangle**
+Day 5-7: First Triangle
 - Create graphics pipeline
 - Load vertex/fragment shaders
 - Create vertex buffer
@@ -35,13 +29,13 @@
 
 #### Week 2: Application Architecture
 
-**Day 8-9: Clean Structure**
+Day 8-9: Clean Structure
 - Application class (lifecycle management)
 - Window class (GLFW wrapper)
 - Input manager (keyboard, mouse)
 - **Deliverable:** Professional code organization
 
-**Day 10-14: Renderer System**
+Day 10-14: Renderer System
 - Renderer class (frame management)
 - Command buffer management
 - Frame synchronization (semaphores, fences)
@@ -50,24 +44,24 @@
 
 ---
 
-### **PHASE 2: CORE UI SYSTEM (Weeks 3-6)**
+PHASE 2: CORE UI SYSTEM (Weeks 3-6)
 
 #### Week 3: UI Foundation
 
-**Day 15-16: Widget Base Class**
+Day 15-16: Widget Base Class
 - Widget hierarchy (parent/child)
 - Bounds & transforms
 - Visibility & enabled state
 - Hit testing
 - **Deliverable:** Widget tree structure works
 
-**Day 17-18: Event System**
+Day 17-18: Event System
 - Event types (mouse, keyboard)
 - Event manager (routing)
 - Focus management
 - **Deliverable:** Click detection works
 
-**Day 19-21: 2D Vulkan Pipeline**
+Day 19-21: 2D Vulkan Pipeline
 - 2D rendering pipeline (orthographic)
 - Draw rectangles, lines
 - Vertex batching
@@ -75,35 +69,35 @@
 
 #### Week 4: Basic Widgets
 
-**Day 22-23: Panel**
+Day 22-23: Panel
 - Background color
 - Border rendering
 - Padding
 - **Deliverable:** Panel widget renders
 
-**Day 24-25: Label (Placeholder)**
+Day 24-25: Label (Placeholder)
 - Text string storage
 - Placeholder rendering (box for now)
 - **Deliverable:** Label widget exists
 
-**Day 26-28: Button**
+Day 26-28: Button
 - Visual states (normal, hover, pressed)
 - Click callback
-- **Deliverable:** Working interactive button
+- Deliverable:
 
-#### Week 5: Text Rendering (CRITICAL)
+Week 5: Text Rendering (CRITICAL)
 
-**Day 29-31: FreeType Integration**
+Day 29-31: FreeType Integration
 - Load TrueType fonts
 - Generate glyph atlas
 - Render text to texture
 - **Deliverable:** Real text on screen!
 
-**Day 32-35: Text Features**
+Day 32-35: Text Features
 - Text measurement
 - Alignment (left, center, right)
 - Multi-line text
-- **Deliverable:** Professional text rendering
+- Deliverable: Professional text rendering
 
 #### Week 6: Complete Basic UI
 
@@ -114,18 +108,17 @@
 - **Deliverable:** Working input widgets
 
 ---
-
-### **PHASE 3: LAYOUT & WINDOWS (Weeks 7-10)**
+PHASE 3: LAYOUT & WINDOWS (Weeks 7-10)
 
 #### Week 7-8: Layout System
 
-**Day 43-49: Box Layout**
+Day 43-49: Box Layout
 - HBox (horizontal layout)
 - VBox (vertical layout)
 - Spacing & margins
 - **Deliverable:** Automatic layout works
 
-**Day 50-56: Constraint System**
+Day 50-56: Constraint System
 - Min/max sizes
 - Size policies (fixed, expanding)
 - Preferred sizes
@@ -133,14 +126,14 @@
 
 #### Week 9-10: Window Management
 
-**Day 57-63: Window Widget**
+Day 57-63: Window Widget
 - Title bar
 - Move (drag title bar)
 - Resize (handles)
 - Close button
 - **Deliverable:** Moveable windows
 
-**Day 64-70: Docking (Basic)**
+Day 64-70: Docking (Basic)
 - Dock space widget
 - Dock preview
 - Split views
@@ -148,31 +141,31 @@
 
 ---
 
-### **PHASE 4: PRODUCTION READY (Weeks 11-14)**
+PHASE 4: PRODUCTION READY (Weeks 11-14)
 
 #### Week 11-12: Theming
 
-**Day 71-77: Theme System**
+Day 71-77: Theme System
 - Color schemes
 - Widget styles
 - Dark/Light themes
 - **Deliverable:** Multiple themes work
 
-**Day 78-84: Polish**
+Day 78-84: Polish
 - Icon support
 - Animations (basic)
 - Transitions
-- **Deliverable:** Professional appearance
+- Deliverable:Professional appearance
 
 #### Week 13-14: Performance & Integration
 
-**Day 85-91: Optimization**
+Day 85-91: Optimization
 - Dirty rectangles
 - Culling
 - Batching
-- **Deliverable:** 60fps with complex UIs
+- Deliverable: 60fps with complex UIs
 
-**Day 92-98: Main Application**
+Day 92-98: Main Application
 - Main window layout
 - Menu bar
 - Tool panels
