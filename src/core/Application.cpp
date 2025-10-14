@@ -1,4 +1,6 @@
 #include "Application.h"
+#include "../render/SwapChain.h"
+#include "../render/Renderer.h"
 #include <iostream>
 #include <stdexcept>
 
@@ -26,9 +28,17 @@ void Application::init() {
     // Create input manager
     inputManager = std::make_unique<InputManager>(window.get());
 
-    // Initialize Vulkan (now takes Window*)
+    // Initialize Vulkan
     vulkanContext = std::make_unique<VulkanContext>(window.get());
     vulkanContext->init();
+
+    // Create swap chain
+    swapChain = new SwapChain();
+    swapChain->init(vulkanContext.get(), window->getHandle());
+
+    // Create renderer
+    renderer = new Renderer();
+    renderer->init(vulkanContext.get(), swapChain);
 
     // Initialize timing
     lastFrameTime = std::chrono::steady_clock::now();
@@ -81,15 +91,34 @@ void Application::update(float deltaTime) {
 }
 
 void Application::render() {
-    // Draw the triangle
-    vulkanContext->drawFrame();
+    // Draw the triangle using renderer
+    renderer->drawFrame();
 }
 
 void Application::cleanup() {
     std::cout << "\n[CLEANUP]" << std::endl;
 
+    // Wait for device to finish
+    if (renderer) {
+        renderer->waitIdle();
+    }
+
+    // Cleanup in reverse order of creation
+    if (renderer) {
+        renderer->cleanup();
+        delete renderer;
+        renderer = nullptr;
+    }
+
+    if (swapChain) {
+        swapChain->cleanup();
+        delete swapChain;
+        swapChain = nullptr;
+    }
+
     // Vulkan cleanup
     if (vulkanContext) {
+        vulkanContext->cleanup();
         vulkanContext.reset();
     }
 

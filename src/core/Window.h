@@ -16,8 +16,9 @@ public:
     // Core functionality
     bool shouldClose() const;
     void pollEvents();
-    VkExtent2D getExtent() const { return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) }; }
-    GLFWwindow* getHandle() const { return window; }
+    VkExtent2D getExtent() const {
+        return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
+    }    GLFWwindow* getHandle() const { return window; }
     bool wasResized() const { return framebufferResized; }
     void resetResizeFlag() { framebufferResized = false; }
 

@@ -8,32 +8,60 @@ project(VulkanProject)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find packages
+# Find Vulkan
 find_package(Vulkan REQUIRED)
-find_package(glfw3 REQUIRED)
-find_package(glm REQUIRED)
 
-# Include all source files for triangle rendering
-set(ALL_SOURCES
-    src/main.cpp
+# Find vcpkg packages
+find_package(glfw3 CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
+
+# Source files - organized by component
+set(CORE_SOURCES
+    src/core/Application.cpp
+    src/core/Window.cpp
+    src/core/InputManager.cpp
+)
+
+set(RENDER_SOURCES
     src/render/VulkanContext.cpp
+    src/render/SwapChain.cpp
     src/render/GraphicsPipeline.cpp
     src/render/Renderer.cpp
-    src/render/SwapChain.cpp
+)
+
+set(SOURCES
+    src/main.cpp
+    ${CORE_SOURCES}
+    ${RENDER_SOURCES}
 )
 
 # Create executable
-add_executable(VulkanProject ${ALL_SOURCES} "src/core/Window.h" "src/core/Window.cpp" "src/core/Inputmanager.h" "src/core/Inputmanager.cpp" "src/core/Application.h" "src/core/Application.cpp")
+add_executable(${PROJECT_NAME} ${SOURCES})
+
+# Include directories
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${Vulkan_INCLUDE_DIRS}
+)
 
 # Link libraries
-target_link_libraries(VulkanProject 
+target_link_libraries(${PROJECT_NAME} PRIVATE
     Vulkan::Vulkan
     glfw
     glm::glm
 )
 
-# Include directories
-target_include_directories(VulkanProject PRIVATE 
-    ${CMAKE_SOURCE_DIR}/src
-    ${Vulkan_INCLUDE_DIRS}
+# Compiler warnings
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /W4)
+else()
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+# Output directories
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
+
+# Copy shaders to build directory (if you have them)
+# file(COPY ${CMAKE_SOURCE_DIR}/shaders DESTINATION ${CMAKE_BINARY_DIR})

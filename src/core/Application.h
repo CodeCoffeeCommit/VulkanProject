@@ -6,6 +6,10 @@
 #include <memory>
 #include <chrono>
 
+// Forward declarations
+class SwapChain;
+class Renderer;
+
 class Application {
 public:
     Application();
@@ -25,6 +29,10 @@ private:
     std::unique_ptr<Window> window;
     std::unique_ptr<InputManager> inputManager;
     std::unique_ptr<VulkanContext> vulkanContext;
+
+    // Rendering components (raw pointers to match existing code style)
+    SwapChain* swapChain = nullptr;
+    Renderer* renderer = nullptr;
 
     // Timing
     std::chrono::steady_clock::time_point lastFrameTime;
