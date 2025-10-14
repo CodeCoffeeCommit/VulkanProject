@@ -6,10 +6,11 @@
 #include <vector>
 #include <optional>
 #include <string>
+#include "../core/Window.h"
 
 class VulkanContext {
 public:
-    VulkanContext();
+    VulkanContext(Window* window);
     ~VulkanContext();
 
     // Initialize Vulkan with GLFW window
@@ -29,9 +30,10 @@ public:
 
 private:
     // Initialization steps
+    Window* window;
     void createInstance();
     void setupDebugMessenger();
-    void createSurface(GLFWwindow* window);
+    void createSurface();
     void pickPhysicalDevice();
     void createLogicalDevice();
 

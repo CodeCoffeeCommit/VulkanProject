@@ -23,7 +23,7 @@ set(ALL_SOURCES
 )
 
 # Create executable
-add_executable(VulkanProject ${ALL_SOURCES})
+add_executable(VulkanProject ${ALL_SOURCES} "src/core/Window.h" "src/core/Window.cpp" "src/core/Inputmanager.h" "src/core/Inputmanager.cpp" "src/core/Application.h" "src/core/Application.cpp")
 
 # Link libraries
 target_link_libraries(VulkanProject 

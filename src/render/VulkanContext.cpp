@@ -3,7 +3,8 @@
 #include <stdexcept>
 #include <set>
 
-VulkanContext::VulkanContext() {
+VulkanContext::VulkanContext(Window* window) : window(window) {
+    // Your current initialization code stays the same
 }
 
 VulkanContext::~VulkanContext() {
@@ -127,8 +128,8 @@ void VulkanContext::setupDebugMessenger() {
     }
 }
 
-void VulkanContext::createSurface(GLFWwindow* window) {
-    if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
+void VulkanContext::createSurface() {
+    if (glfwCreateWindowSurface(instance, window->getHandle(), nullptr, &surface) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create window surface!");
     }
     std::cout << "[OK] Window surface created" << std::endl;
