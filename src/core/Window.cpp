@@ -47,4 +47,13 @@ void Window::framebufferResizeCallback(GLFWwindow* window, int width, int height
     app->framebufferResized = true;
     app->width = width;
     app->height = height;
+
+
+}
+
+VkExtent2D Window::getExtent() const {
+    VkExtent2D extent;
+    extent.width = static_cast<uint32_t>(width);
+    extent.height = static_cast<uint32_t>(height);
+    return extent;
 }
