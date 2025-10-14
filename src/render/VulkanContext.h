@@ -14,7 +14,7 @@ public:
     ~VulkanContext();
 
     // Initialize Vulkan with GLFW window
-    void init(GLFWwindow* window);
+    void init();
     void cleanup();
 
     // Getters

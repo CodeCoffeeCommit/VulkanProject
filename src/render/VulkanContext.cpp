@@ -10,10 +10,10 @@ VulkanContext::VulkanContext(Window* window) : window(window) {
 VulkanContext::~VulkanContext() {
 }
 
-void VulkanContext::init(GLFWwindow* window) {
+void VulkanContext::init() {
     createInstance();
     setupDebugMessenger();
-    createSurface(window);
+    createSurface();
     pickPhysicalDevice();
     createLogicalDevice();
 

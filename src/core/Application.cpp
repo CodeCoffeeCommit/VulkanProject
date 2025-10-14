@@ -28,6 +28,7 @@ void Application::init() {
 
     // Initialize Vulkan (now takes Window*)
     vulkanContext = std::make_unique<VulkanContext>(window.get());
+    vulkanContext->init();
 
     // Initialize timing
     lastFrameTime = std::chrono::steady_clock::now();
