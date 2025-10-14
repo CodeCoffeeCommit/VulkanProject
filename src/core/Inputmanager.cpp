@@ -3,71 +3,124 @@
 #include <iostream>
 
 InputManager::InputManager(Window* window) : window(window) {
-    // Initialize all key states to false
-    for (int i = 0; i <= GLFW_KEY_LAST; i++) {
-        prevKeyStates[i] = false;
-    }
-    for (int i = 0; i <= GLFW_MOUSE_BUTTON_LAST; i++) {
-        prevMouseButtonStates[i] = false;
-    }
+    glfwWindow = window->getHandle();
 
-    std::cout << "[OK] Input manager created" << std::endl;
+    // Set user pointer to this instance
+    glfwSetWindowUserPointer(glfwWindow, this);
+
+    // Set callbacks
+    glfwSetKeyCallback(glfwWindow, keyCallback);
+    glfwSetMouseButtonCallback(glfwWindow, mouseButtonCallback);
+    glfwSetCursorPosCallback(glfwWindow, cursorPositionCallback);
+    glfwSetScrollCallback(glfwWindow, scrollCallback);
+
+    // Get initial mouse position
+    glfwGetCursorPos(glfwWindow, &mouseX, &mouseY);
+    lastMouseX = mouseX;
+    lastMouseY = mouseY;
+
+    std::cout << "[OK] Input manager initialized" << std::endl;
+}
+
+InputManager::~InputManager() {
+    std::cout << "[OK] Input manager destroyed" << std::endl;
 }
 
 void InputManager::update() {
-    GLFWwindow* glfwWindow = window->getHandle();
+    // Clear just pressed/released states
+    keysJustPressed.clear();
+    keysJustReleased.clear();
+    mouseButtonsJustPressed.clear();
+    mouseButtonsJustReleased.clear();
 
-    // Update keyboard state
-    for (int key = 0; key <= GLFW_KEY_LAST; key++) {
-        prevKeyStates[key] = (glfwGetKey(glfwWindow, key) == GLFW_PRESS);
-    }
+    // Update mouse delta
+    mouseDeltaX = mouseX - lastMouseX;
+    mouseDeltaY = mouseY - lastMouseY;
+    lastMouseX = mouseX;
+    lastMouseY = mouseY;
 
-    // Update mouse button state
-    for (int button = 0; button <= GLFW_MOUSE_BUTTON_LAST; button++) {
-        prevMouseButtonStates[button] = (glfwGetMouseButton(glfwWindow, button) == GLFW_PRESS);
-    }
-
-    // Update mouse position
-    prevMousePos = currentMousePos;
-    double xpos, ypos;
-    glfwGetCursorPos(glfwWindow, &xpos, &ypos);
-    currentMousePos = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));
+    // Reset scroll (scroll is event-based, not state-based)
+    scrollX = 0.0;
+    scrollY = 0.0;
 }
 
 bool InputManager::isKeyPressed(int key) const {
-    if (key < 0 || key > GLFW_KEY_LAST) return false;
-    return glfwGetKey(window->getHandle(), key) == GLFW_PRESS;
+    auto it = keysPressed.find(key);
+    return it != keysPressed.end() && it->second;
 }
 
-bool InputManager::isKeyDown(int key) const {
-    if (key < 0 || key > GLFW_KEY_LAST) return false;
-    return isKeyPressed(key) && !prevKeyStates[key];
+bool InputManager::isKeyJustPressed(int key) const {
+    auto it = keysJustPressed.find(key);
+    return it != keysJustPressed.end() && it->second;
 }
 
-bool InputManager::isKeyUp(int key) const {
-    if (key < 0 || key > GLFW_KEY_LAST) return false;
-    return !isKeyPressed(key) && prevKeyStates[key];
+bool InputManager::isKeyJustReleased(int key) const {
+    auto it = keysJustReleased.find(key);
+    return it != keysJustReleased.end() && it->second;
 }
 
 bool InputManager::isMouseButtonPressed(int button) const {
-    if (button < 0 || button > GLFW_MOUSE_BUTTON_LAST) return false;
-    return glfwGetMouseButton(window->getHandle(), button) == GLFW_PRESS;
+    auto it = mouseButtonsPressed.find(button);
+    return it != mouseButtonsPressed.end() && it->second;
 }
 
-bool InputManager::isMouseButtonDown(int button) const {
-    if (button < 0 || button > GLFW_MOUSE_BUTTON_LAST) return false;
-    return isMouseButtonPressed(button) && !prevMouseButtonStates[button];
+bool InputManager::isMouseButtonJustPressed(int button) const {
+    auto it = mouseButtonsJustPressed.find(button);
+    return it != mouseButtonsJustPressed.end() && it->second;
 }
 
-bool InputManager::isMouseButtonUp(int button) const {
-    if (button < 0 || button > GLFW_MOUSE_BUTTON_LAST) return false;
-    return !isMouseButtonPressed(button) && prevMouseButtonStates[button];
+bool InputManager::isMouseButtonJustReleased(int button) const {
+    auto it = mouseButtonsJustReleased.find(button);
+    return it != mouseButtonsJustReleased.end() && it->second;
 }
 
-glm::vec2 InputManager::getMousePosition() const {
-    return currentMousePos;
+// Static callbacks
+void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    auto* input = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
+    if (!input) return;
+
+    if (action == GLFW_PRESS) {
+        input->keysPressed[key] = true;
+        input->keysJustPressed[key] = true;
+    }
+    else if (action == GLFW_RELEASE) {
+        input->keysPressed[key] = false;
+        input->keysJustReleased[key] = true;
+    }
 }
 
-glm::vec2 InputManager::getMouseDelta() const {
-    return currentMousePos - prevMousePos;
+void InputManager::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    auto* input = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
+    if (!input) return;
+
+    if (action == GLFW_PRESS) {
+        input->mouseButtonsPressed[button] = true;
+        input->mouseButtonsJustPressed[button] = true;
+    }
+    else if (action == GLFW_RELEASE) {
+        input->mouseButtonsPressed[button] = false;
+        input->mouseButtonsJustReleased[button] = true;
+    }
+}
+
+void InputManager::cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
+    auto* input = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
+    if (!input) return;
+
+    input->mouseX = xpos;
+    input->mouseY = ypos;
+
+    if (input->firstMouse) {
+        input->lastMouseX = xpos;
+        input->lastMouseY = ypos;
+        input->firstMouse = false;
+    }
+}
+
+void InputManager::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+    auto* input = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
+    if (!input) return;
+
+    input->scrollX = xoffset;
+    input->scrollY = yoffset;
 }

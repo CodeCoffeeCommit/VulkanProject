@@ -42,18 +42,16 @@ void Window::pollEvents() {
     glfwPollEvents();
 }
 
-void Window::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
-    auto app = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-    app->framebufferResized = true;
-    app->width = width;
-    app->height = height;
-
-
-}
-
 VkExtent2D Window::getExtent() const {
     VkExtent2D extent;
     extent.width = static_cast<uint32_t>(width);
     extent.height = static_cast<uint32_t>(height);
     return extent;
+}
+
+void Window::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+    auto app = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+    app->framebufferResized = true;
+    app->width = width;
+    app->height = height;
 }

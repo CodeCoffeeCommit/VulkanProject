@@ -13,7 +13,7 @@ public:
     VulkanContext(Window* window);
     ~VulkanContext();
 
-    // Initialize Vulkan with GLFW window
+    // Initialize Vulkan
     void init();
     void cleanup();
 
@@ -29,8 +29,10 @@ public:
     uint32_t getPresentQueueFamily() const { return queueIndices.presentFamily.value(); }
 
 private:
-    // Initialization steps
+    // Store window pointer
     Window* window;
+
+    // Initialization steps
     void createInstance();
     void setupDebugMessenger();
     void createSurface();

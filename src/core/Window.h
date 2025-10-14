@@ -1,34 +1,48 @@
 #pragma once
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#include <string>
+#include "Window.h"
+#include "InputManager.h"
+#include "../render/VulkanContext.h"
+#include <memory>
+#include <chrono>
 
-class Window {
+// Forward declarations
+class SwapChain;
+class Renderer;
+
+class Application {
 public:
-    Window(int width, int height, const std::string& title);
-    ~Window();
+    Application();
+    ~Application();
 
-    // Prevent copying
-    Window(const Window&) = delete;
-    Window& operator=(const Window&) = delete;
-
-    // Core functionality
-    bool shouldClose() const;
-    void pollEvents();
-    VkExtent2D getExtent() const;  // <-- Just the declaration now
-    GLFWwindow* getHandle() const { return window; }
-
-
-    bool wasResized() const { return framebufferResized; }
-    void resetResizeFlag() { framebufferResized = false; }
+    // Main entry point
+    void run();
 
 private:
-    static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
+    void init();
+    void mainLoop();
+    void cleanup();
+    void update(float deltaTime);
+    void render();
+    void recreateSwapChain();  // FIXED: Added missing method
+    void updateFPS();          // FIXED: Added missing method
 
-    GLFWwindow* window;
-    int width;
-    int height;
-    std::string title;
-    bool framebufferResized = false;
+    // Core components
+    std::unique_ptr<Window> window;
+    std::unique_ptr<InputManager> inputManager;
+    std::unique_ptr<VulkanContext> vulkanContext;
+
+    // Rendering components (raw pointers to match existing code style)
+    SwapChain* swapChain = nullptr;
+    Renderer* renderer = nullptr;
+
+    // Timing
+    std::chrono::steady_clock::time_point lastFrameTime;
+    float deltaTime = 0.0f;
+    float fps = 0.0f;
+
+    // Configuration
+    static constexpr int WINDOW_WIDTH = 1280;
+    static constexpr int WINDOW_HEIGHT = 720;
+    static constexpr const char* WINDOW_TITLE = "Libre DCC Tool - Alpha";
 };

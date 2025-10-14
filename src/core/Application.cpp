@@ -28,9 +28,9 @@ void Application::init() {
     // Create input manager
     inputManager = std::make_unique<InputManager>(window.get());
 
-    // Initialize Vulkan
+    // Initialize Vulkan - Pass window to constructor
     vulkanContext = std::make_unique<VulkanContext>(window.get());
-    vulkanContext->init();
+    vulkanContext->init();  // Call init with NO parameters
 
     // Create swap chain
     swapChain = new SwapChain();
@@ -44,7 +44,6 @@ void Application::init() {
     lastFrameTime = std::chrono::steady_clock::now();
 
     std::cout << "\n[OK] Application initialized successfully!" << std::endl;
-    std::cout << "====================================" << std::endl;
 }
 
 void Application::mainLoop() {
@@ -68,12 +67,24 @@ void Application::mainLoop() {
             glfwSetWindowShouldClose(window->getHandle(), GLFW_TRUE);
         }
 
+        // Update FPS counter
+        updateFPS();
+
         // Update application logic
         update(deltaTime);
 
         // Render frame
         render();
+
+        // Handle window resize
+        if (window->wasResized()) {
+            window->resetResizeFlag();
+            recreateSwapChain();
+        }
     }
+
+    // Wait for device to finish
+    renderer->waitIdle();
 
     std::cout << "\n[MAIN LOOP ENDED]" << std::endl;
 }
@@ -93,6 +104,30 @@ void Application::update(float deltaTime) {
 void Application::render() {
     // Draw the triangle using renderer
     renderer->drawFrame();
+}
+
+void Application::recreateSwapChain() {
+    // Wait for device idle
+    renderer->waitIdle();
+
+    // Recreate swap chain
+    swapChain->recreate(window->getHandle());
+}
+
+void Application::updateFPS() {
+    static int frameCount = 0;
+    static float timeAccumulator = 0.0f;
+
+    frameCount++;
+    timeAccumulator += deltaTime;
+
+    if (timeAccumulator >= 1.0f) {
+        float fps = frameCount / timeAccumulator;
+        std::cout << "\rFPS: " << fps << std::flush;
+
+        frameCount = 0;
+        timeAccumulator = 0.0f;
+    }
 }
 
 void Application::cleanup() {

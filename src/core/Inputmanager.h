@@ -1,37 +1,71 @@
 #pragma once
 
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
+#include <unordered_map>
 
 class Window;
 
 class InputManager {
 public:
     InputManager(Window* window);
+    ~InputManager();
 
-    // Update state (call once per frame)
+    // Update input state
     void update();
 
-    // Keyboard
+    // Keyboard input
     bool isKeyPressed(int key) const;
-    bool isKeyDown(int key) const;      // Just pressed this frame
-    bool isKeyUp(int key) const;        // Just released this frame
+    bool isKeyJustPressed(int key) const;
+    bool isKeyJustReleased(int key) const;
 
-    // Mouse buttons
+    // Mouse input
     bool isMouseButtonPressed(int button) const;
-    bool isMouseButtonDown(int button) const;
-    bool isMouseButtonUp(int button) const;
+    bool isMouseButtonJustPressed(int button) const;
+    bool isMouseButtonJustReleased(int button) const;
 
     // Mouse position
-    glm::vec2 getMousePosition() const;
-    glm::vec2 getMouseDelta() const;    // Movement since last frame
+    double getMouseX() const { return mouseX; }
+    double getMouseY() const { return mouseY; }
+    double getMouseDeltaX() const { return mouseDeltaX; }
+    double getMouseDeltaY() const { return mouseDeltaY; }
+
+    // Mouse scroll
+    double getScrollX() const { return scrollX; }
+    double getScrollY() const { return scrollY; }
+
+    // Callbacks (static for GLFW)
+    static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+    static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+    static void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos);
+    static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
 private:
     Window* window;
+    GLFWwindow* glfwWindow;
 
-    // Previous frame state
-    bool prevKeyStates[GLFW_KEY_LAST + 1] = {};
-    bool prevMouseButtonStates[GLFW_MOUSE_BUTTON_LAST + 1] = {};
-    glm::vec2 prevMousePos = glm::vec2(0.0f);
-    glm::vec2 currentMousePos = glm::vec2(0.0f);
+    // Keyboard state
+    std::unordered_map<int, bool> keysPressed;
+    std::unordered_map<int, bool> keysJustPressed;
+    std::unordered_map<int, bool> keysJustReleased;
+
+    // Mouse button state
+    std::unordered_map<int, bool> mouseButtonsPressed;
+    std::unordered_map<int, bool> mouseButtonsJustPressed;
+    std::unordered_map<int, bool> mouseButtonsJustReleased;
+
+    // Mouse position
+    double mouseX = 0.0;
+    double mouseY = 0.0;
+    double lastMouseX = 0.0;
+    double lastMouseY = 0.0;
+    double mouseDeltaX = 0.0;
+    double mouseDeltaY = 0.0;
+
+    // Mouse scroll
+    double scrollX = 0.0;
+    double scrollY = 0.0;
+
+    // First mouse movement flag
+    bool firstMouse = true;
 };

@@ -2,12 +2,14 @@
 #include <iostream>
 #include <stdexcept>
 #include <set>
+#include <cstring>
 
 VulkanContext::VulkanContext(Window* window) : window(window) {
-    // Your current initialization code stays the same
+    // Constructor just stores the window pointer
 }
 
 VulkanContext::~VulkanContext() {
+    cleanup();
 }
 
 void VulkanContext::init() {
@@ -74,6 +76,7 @@ void VulkanContext::createInstance() {
         createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
         createInfo.ppEnabledLayerNames = validationLayers.data();
 
+        // Debug messenger for instance creation/destruction
         debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
         debugCreateInfo.messageSeverity =
             VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
@@ -92,6 +95,7 @@ void VulkanContext::createInstance() {
         createInfo.pNext = nullptr;
     }
 
+    // Create instance
     if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create Vulkan instance!");
     }
@@ -129,6 +133,7 @@ void VulkanContext::setupDebugMessenger() {
 }
 
 void VulkanContext::createSurface() {
+    // Use the stored window member variable - NO PARAMETERS
     if (glfwCreateWindowSurface(instance, window->getHandle(), nullptr, &surface) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create window surface!");
     }
@@ -146,6 +151,7 @@ void VulkanContext::pickPhysicalDevice() {
     std::vector<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
+    // Pick first suitable device
     for (const auto& device : devices) {
         if (isDeviceSuitable(device)) {
             physicalDevice = device;
@@ -157,6 +163,7 @@ void VulkanContext::pickPhysicalDevice() {
         throw std::runtime_error("Failed to find a suitable GPU!");
     }
 
+    // Print device info
     VkPhysicalDeviceProperties deviceProperties;
     vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
     std::cout << "[OK] Using GPU: " << deviceProperties.deviceName << std::endl;
@@ -203,6 +210,7 @@ void VulkanContext::createLogicalDevice() {
         throw std::runtime_error("Failed to create logical device!");
     }
 
+    // Get queues
     vkGetDeviceQueue(device, queueIndices.graphicsFamily.value(), 0, &graphicsQueue);
     vkGetDeviceQueue(device, queueIndices.presentFamily.value(), 0, &presentQueue);
 
@@ -250,6 +258,7 @@ std::vector<const char*> VulkanContext::getRequiredExtensions() {
 bool VulkanContext::isDeviceSuitable(VkPhysicalDevice device) {
     QueueFamilyIndices indices = findQueueFamilies(device);
 
+    // Check device extensions
     uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
@@ -275,16 +284,19 @@ VulkanContext::QueueFamilyIndices VulkanContext::findQueueFamilies(VkPhysicalDev
 
     int i = 0;
     for (const auto& queueFamily : queueFamilies) {
+        // Graphics queue
         if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             indices.graphicsFamily = i;
         }
 
+        // Present queue
         VkBool32 presentSupport = false;
         vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
         if (presentSupport) {
             indices.presentFamily = i;
         }
 
+        // Early exit if we found all required queues
         if (indices.isComplete()) {
             break;
         }
