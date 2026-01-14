@@ -18,6 +18,7 @@ public:
         cleanup();
     }
 
+
 private:
     GLFWwindow* window = nullptr;
     VulkanContext* vulkanContext = nullptr;
