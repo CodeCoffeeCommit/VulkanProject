@@ -1,6 +1,7 @@
 ﻿#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include "core/Window.h"
 #include "render/VulkanContext.h"
 #include "render/SwapChain.h"
 #include "render/Renderer.h"
@@ -18,9 +19,8 @@ public:
         cleanup();
     }
 
-
 private:
-    GLFWwindow* window = nullptr;
+    Window* window = nullptr;
     VulkanContext* vulkanContext = nullptr;
     SwapChain* swapChain = nullptr;
     Renderer* renderer = nullptr;
@@ -29,27 +29,18 @@ private:
     const uint32_t HEIGHT = 600;
 
     void initWindow() {
-        glfwInit();
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
-        window = glfwCreateWindow(WIDTH, HEIGHT, "Libre DCC Tool - Day 3-4", nullptr, nullptr);
-
-        if (!window) {
-            throw std::runtime_error("Failed to create GLFW window!");
-        }
-
+        window = new Window(WIDTH, HEIGHT, "Libre DCC Tool - Triangle");
         std::cout << "[OK] Window created" << std::endl;
     }
 
     void initVulkan() {
-        // Initialize Vulkan context
-        vulkanContext = new VulkanContext();
-        vulkanContext->init(window);
+        // Create VulkanContext with window pointer
+        vulkanContext = new VulkanContext(window);
+        vulkanContext->init();  // No arguments!
 
         // Create swap chain
         swapChain = new SwapChain();
-        swapChain->init(vulkanContext, window);
+        swapChain->init(vulkanContext, window->getHandle());
 
         // Create renderer
         renderer = new Renderer();
@@ -58,16 +49,15 @@ private:
 
     void mainLoop() {
         std::cout << "\n==================================" << std::endl;
-        std::cout << "Rendering! You should see color!" << std::endl;
+        std::cout << "Rendering triangle!" << std::endl;
         std::cout << "Close window to exit." << std::endl;
         std::cout << "==================================\n" << std::endl;
 
-        while (!glfwWindowShouldClose(window)) {
-            glfwPollEvents();
+        while (!window->shouldClose()) {
+            window->pollEvents();
             renderer->drawFrame();
         }
 
-        // Wait for operations to finish
         renderer->waitIdle();
     }
 
@@ -88,18 +78,17 @@ private:
         }
 
         if (window) {
-            glfwDestroyWindow(window);
+            delete window;
         }
 
-        glfwTerminate();
         std::cout << "[OK] Application shutdown complete" << std::endl;
     }
 };
 
 int main() {
     std::cout << "\n==================================" << std::endl;
-    std::cout << "LIBRE DCC TOOL - Day 3-4" << std::endl;
-    std::cout << "Initializing Vulkan rendering..." << std::endl;
+    std::cout << "LIBRE DCC TOOL" << std::endl;
+    std::cout << "Initializing Vulkan..." << std::endl;
     std::cout << "==================================\n" << std::endl;
 
     Application app;
@@ -112,6 +101,6 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    std::cout << "\n[SUCCESS] Rendering worked!" << std::endl;
+    std::cout << "\n[SUCCESS] Program completed!" << std::endl;
     return EXIT_SUCCESS;
 }
