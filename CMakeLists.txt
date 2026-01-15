@@ -23,6 +23,22 @@ add_executable(${PROJECT_NAME}
     src/core/InputManager.h
     src/core/Camera.cpp
     src/core/Camera.h
+    src/core/Event.h
+    src/core/Command.h
+    src/core/Editor.cpp
+    src/core/Editor.h
+    src/core/Selection.h
+    
+    # World (ECS)
+    src/world/Types.h
+    src/world/ComponentStorage.h
+    src/world/RelationshipStore.h
+    src/world/World.cpp
+    src/world/World.h
+    src/world/Primitives.h
+    
+    # Components
+    src/components/CoreComponents.h
     
     # Rendering
     src/render/VulkanContext.cpp

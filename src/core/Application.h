@@ -26,6 +26,13 @@ private:
     void recreateSwapChain();
     void processInput(float deltaTime);
 
+    // ECS integration
+    void createDefaultScene();
+    void updateTransforms();
+    void syncECSToRenderer();
+    void handleSelection();
+    void printControls();
+
     // Core components
     std::unique_ptr<Window> window;
     std::unique_ptr<InputManager> inputManager;
@@ -45,6 +52,7 @@ private:
     bool middleMouseDown = false;
     bool shiftHeld = false;
     bool ctrlHeld = false;
+    bool altHeld = false;
     double lastMouseX = 0.0;
     double lastMouseY = 0.0;
 
