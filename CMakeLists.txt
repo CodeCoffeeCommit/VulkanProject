@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Find packages
 find_package(Vulkan REQUIRED)
 find_package(glfw3 REQUIRED)
+find_package(glm REQUIRED)
 
 # Add executable
 add_executable(${PROJECT_NAME}
@@ -19,6 +20,8 @@ add_executable(${PROJECT_NAME}
     src/core/Window.h
     src/core/InputManager.cpp
     src/core/InputManager.h
+    src/core/Camera.cpp
+    src/core/Camera.h
     
     # Rendering
     src/render/VulkanContext.cpp
@@ -29,6 +32,14 @@ add_executable(${PROJECT_NAME}
     src/render/Renderer.h
     src/render/GraphicsPipeline.cpp
     src/render/GraphicsPipeline.h
+    src/render/Mesh.cpp
+    src/render/Mesh.h
+    src/render/Grid.cpp
+    src/render/Grid.h
+    src/render/Primitives.cpp
+    src/render/Primitives.h
+    src/render/UniformBuffer.cpp
+    src/render/UniformBuffer.h
 )
 
 # Include directories
@@ -41,35 +52,20 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_link_libraries(${PROJECT_NAME}
     ${Vulkan_LIBRARIES}
     glfw
+    glm::glm
 )
-
-# Copy shaders to build directory
-file(GLOB SHADERS
-    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vert"
-    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag"
-    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.spv"
-)
-
-foreach(SHADER ${SHADERS})
-    get_filename_component(SHADER_NAME ${SHADER} NAME)
-    configure_file(${SHADER} ${CMAKE_CURRENT_BINARY_DIR}/shaders/${SHADER_NAME} COPYONLY)
-endforeach()
 
 # Platform-specific settings
 if(WIN32)
-    # Windows-specific settings
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
 endif()
 
 if(MSVC)
-    # Visual Studio specific settings
     target_compile_options(${PROJECT_NAME} PRIVATE /W3)
 else()
-    # GCC/Clang settings
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)
 endif()
 
-# Debug/Release configurations
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG)
 endif()

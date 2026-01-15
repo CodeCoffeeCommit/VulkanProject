@@ -6,7 +6,7 @@
 
 Application::Application() {
     std::cout << "====================================" << std::endl;
-    std::cout << "LIBRE DCC TOOL - Day 8-9 Refactor" << std::endl;
+    std::cout << "LIBRE DCC TOOL - 3D Viewport" << std::endl;
     std::cout << "====================================" << std::endl;
 }
 
@@ -22,124 +22,148 @@ void Application::run() {
 void Application::init() {
     std::cout << "\n[INITIALIZATION]" << std::endl;
 
-    // Create window first
     window = std::make_unique<Window>(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE);
-
-    // Create input manager
     inputManager = std::make_unique<InputManager>(window.get());
 
-    // Initialize Vulkan - Pass window to constructor
-    vulkanContext = std::make_unique<VulkanContext>(window.get());
-    vulkanContext->init();  // Call init with NO parameters
+    // Create camera
+    camera = std::make_unique<Camera>();
+    camera->setAspectRatio(static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT));
 
-    // Create swap chain
+    vulkanContext = std::make_unique<VulkanContext>(window.get());
+    vulkanContext->init();
+
     swapChain = new SwapChain();
     swapChain->init(vulkanContext.get(), window->getHandle());
 
-    // Create renderer
     renderer = new Renderer();
     renderer->init(vulkanContext.get(), swapChain);
 
-    // Initialize timing
     lastFrameTime = std::chrono::steady_clock::now();
 
     std::cout << "\n[OK] Application initialized successfully!" << std::endl;
+    std::cout << "\n=== Controls ===" << std::endl;
+    std::cout << "Middle Mouse + Drag: Orbit" << std::endl;
+    std::cout << "Shift + Middle Mouse + Drag: Pan" << std::endl;
+    std::cout << "Scroll Wheel: Zoom" << std::endl;
+    std::cout << "Numpad 1: Front View" << std::endl;
+    std::cout << "Numpad 3: Right View" << std::endl;
+    std::cout << "Numpad 7: Top View" << std::endl;
+    std::cout << "Numpad 0: Reset View" << std::endl;
+    std::cout << "ESC: Exit" << std::endl;
+    std::cout << "================\n" << std::endl;
 }
 
 void Application::mainLoop() {
-    std::cout << "\n[MAIN LOOP STARTED]" << std::endl;
-    std::cout << "Press ESC to exit...\n" << std::endl;
-
     while (!window->shouldClose()) {
-        // Calculate delta time
         auto currentTime = std::chrono::steady_clock::now();
         deltaTime = std::chrono::duration<float>(currentTime - lastFrameTime).count();
         lastFrameTime = currentTime;
         fps = 1.0f / deltaTime;
 
-        // Process input
         window->pollEvents();
         inputManager->update();
 
-        // Check for ESC key to close
-        if (inputManager->isKeyPressed(GLFW_KEY_ESCAPE)) {
-            std::cout << "ESC pressed - exiting..." << std::endl;
-            glfwSetWindowShouldClose(window->getHandle(), GLFW_TRUE);
-        }
-
-        // Update FPS counter
-        updateFPS();
-
-        // Update application logic
+        processInput(deltaTime);
         update(deltaTime);
-
-        // Render frame
         render();
 
-        // Handle window resize
         if (window->wasResized()) {
             window->resetResizeFlag();
-            recreateSwapChain();
+
+            int width, height;
+            glfwGetFramebufferSize(window->getHandle(), &width, &height);
+
+            if (width > 0 && height > 0) {
+                camera->setAspectRatio(static_cast<float>(width) / static_cast<float>(height));
+                recreateSwapChain();
+            }
         }
     }
 
-    // Wait for device to finish
     renderer->waitIdle();
+}
 
-    std::cout << "\n[MAIN LOOP ENDED]" << std::endl;
+void Application::processInput(float deltaTime) {
+    // ESC to exit
+    if (inputManager->isKeyPressed(GLFW_KEY_ESCAPE)) {
+        glfwSetWindowShouldClose(window->getHandle(), GLFW_TRUE);
+    }
+
+    // Track modifier keys
+    shiftHeld = inputManager->isKeyPressed(GLFW_KEY_LEFT_SHIFT) ||
+        inputManager->isKeyPressed(GLFW_KEY_RIGHT_SHIFT);
+    ctrlHeld = inputManager->isKeyPressed(GLFW_KEY_LEFT_CONTROL) ||
+        inputManager->isKeyPressed(GLFW_KEY_RIGHT_CONTROL);
+
+    // View shortcuts (numpad)
+    if (inputManager->isKeyJustPressed(GLFW_KEY_KP_1)) {
+        camera->setFront();
+    }
+    if (inputManager->isKeyJustPressed(GLFW_KEY_KP_3)) {
+        camera->setRight();
+    }
+    if (inputManager->isKeyJustPressed(GLFW_KEY_KP_7)) {
+        camera->setTop();
+    }
+    if (inputManager->isKeyJustPressed(GLFW_KEY_KP_0)) {
+        camera->reset();
+    }
+
+    // Middle mouse button for camera control
+    if (inputManager->isMouseButtonJustPressed(GLFW_MOUSE_BUTTON_MIDDLE)) {
+        middleMouseDown = true;
+        lastMouseX = inputManager->getMouseX();
+        lastMouseY = inputManager->getMouseY();
+    }
+    if (inputManager->isMouseButtonJustReleased(GLFW_MOUSE_BUTTON_MIDDLE)) {
+        middleMouseDown = false;
+    }
+
+    // Camera orbit/pan with middle mouse
+    if (middleMouseDown) {
+        double currentX = inputManager->getMouseX();
+        double currentY = inputManager->getMouseY();
+        float deltaX = static_cast<float>(currentX - lastMouseX);
+        float deltaY = static_cast<float>(currentY - lastMouseY);
+
+        if (shiftHeld) {
+            // Pan
+            camera->pan(deltaX, deltaY);
+        }
+        else {
+            // Orbit
+            camera->orbit(deltaX, deltaY);
+        }
+
+        lastMouseX = currentX;
+        lastMouseY = currentY;
+    }
+
+    // Scroll wheel for zoom
+    double scrollY = inputManager->getScrollY();
+    if (scrollY != 0.0) {
+        camera->zoom(static_cast<float>(scrollY));
+    }
 }
 
 void Application::update(float deltaTime) {
-    // Application logic will go here
-    // For now, just print FPS occasionally
-    static float fpsTimer = 0.0f;
-    fpsTimer += deltaTime;
-
-    if (fpsTimer >= 2.0f) {
-        std::cout << "FPS: " << static_cast<int>(fps) << std::endl;
-        fpsTimer = 0.0f;
-    }
+    // Future: animation, physics, etc.
 }
 
 void Application::render() {
-    // Draw the triangle using renderer
-    renderer->drawFrame();
+    renderer->drawFrame(camera.get());
 }
 
 void Application::recreateSwapChain() {
-    // Wait for device idle
     renderer->waitIdle();
-
-    // Recreate swap chain
     swapChain->recreate(window->getHandle());
-}
-
-void Application::updateFPS() {
-    static int frameCount = 0;
-    static float timeAccumulator = 0.0f;
-
-    frameCount++;
-    timeAccumulator += deltaTime;
-
-    if (timeAccumulator >= 1.0f) {
-        float fps = frameCount / timeAccumulator;
-        std::cout << "\rFPS: " << fps << std::flush;
-
-        frameCount = 0;
-        timeAccumulator = 0.0f;
-    }
 }
 
 void Application::cleanup() {
     std::cout << "\n[CLEANUP]" << std::endl;
 
-    // Wait for device to finish
     if (renderer) {
         renderer->waitIdle();
-    }
-
-    // Cleanup in reverse order of creation
-    if (renderer) {
         renderer->cleanup();
         delete renderer;
         renderer = nullptr;
@@ -151,22 +175,22 @@ void Application::cleanup() {
         swapChain = nullptr;
     }
 
-    // Vulkan cleanup
     if (vulkanContext) {
         vulkanContext->cleanup();
         vulkanContext.reset();
     }
 
-    // Input manager cleanup
+    if (camera) {
+        camera.reset();
+    }
+
     if (inputManager) {
         inputManager.reset();
     }
 
-    // Window cleanup (GLFW)
     if (window) {
         window.reset();
     }
 
     std::cout << "[OK] Application cleaned up" << std::endl;
-    std::cout << "====================================" << std::endl;
 }

@@ -2,11 +2,11 @@
 
 #include "Window.h"
 #include "InputManager.h"
+#include "Camera.h"
 #include "../render/VulkanContext.h"
 #include <memory>
 #include <chrono>
 
-// Forward declarations
 class SwapChain;
 class Renderer;
 
@@ -15,7 +15,6 @@ public:
     Application();
     ~Application();
 
-    // Main entry point
     void run();
 
 private:
@@ -25,12 +24,13 @@ private:
     void update(float deltaTime);
     void render();
     void recreateSwapChain();
-    void updateFPS();
+    void processInput(float deltaTime);
 
     // Core components
     std::unique_ptr<Window> window;
     std::unique_ptr<InputManager> inputManager;
     std::unique_ptr<VulkanContext> vulkanContext;
+    std::unique_ptr<Camera> camera;
 
     // Rendering components
     SwapChain* swapChain = nullptr;
@@ -41,8 +41,15 @@ private:
     float deltaTime = 0.0f;
     float fps = 0.0f;
 
+    // Mouse state for camera control
+    bool middleMouseDown = false;
+    bool shiftHeld = false;
+    bool ctrlHeld = false;
+    double lastMouseX = 0.0;
+    double lastMouseY = 0.0;
+
     // Configuration
     static constexpr int WINDOW_WIDTH = 1280;
     static constexpr int WINDOW_HEIGHT = 720;
-    static constexpr const char* WINDOW_TITLE = "Libre DCC Tool - Alpha";
+    static constexpr const char* WINDOW_TITLE = "Libre DCC Tool - 3D Viewport";
 };
