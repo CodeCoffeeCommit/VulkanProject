@@ -39,8 +39,8 @@ void GraphicsPipeline::cleanup() {
 
 void GraphicsPipeline::createMeshPipeline() {
     // Load shaders
-    auto vertShaderCode = readFile("shaders/workbench.vert.spv");
-    auto fragShaderCode = readFile("shaders/workbench.frag.spv");
+    auto vertShaderCode = readFile("shaders/compiled/grid.vert.spv");
+    auto fragShaderCode = readFile("shaders/compiled/grid.frag.spv");
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -173,8 +173,8 @@ void GraphicsPipeline::createMeshPipeline() {
 
 void GraphicsPipeline::createGridPipeline() {
     // Load grid shaders
-    auto vertShaderCode = readFile("shaders/grid.vert.spv");
-    auto fragShaderCode = readFile("shaders/grid.frag.spv");
+    auto vertShaderCode = readFile("shaders/compiled/grid.vert.spv");
+    auto fragShaderCode = readFile("shaders/compiled/grid.frag.spv");
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);

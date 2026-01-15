@@ -2,6 +2,7 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 #include <vector>
 
 class VulkanContext;
@@ -31,15 +32,10 @@ private:
     void createCommandPool();
     void createCommandBuffers();
     void createSyncObjects();
- 
     void createSceneObjects();
 
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
     void updateUniformBuffer(uint32_t currentImage, Camera* camera);
-
-    // Helper functions
-    
-    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
     VulkanContext* context = nullptr;
     SwapChain* swapChain = nullptr;
@@ -50,7 +46,6 @@ private:
     Grid* grid = nullptr;
     Mesh* cube = nullptr;
 
-    
     VkCommandPool commandPool = VK_NULL_HANDLE;
     std::vector<VkCommandBuffer> commandBuffers;
 

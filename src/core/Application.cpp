@@ -61,11 +61,12 @@ void Application::mainLoop() {
         fps = 1.0f / deltaTime;
 
         window->pollEvents();
-        inputManager->update();
 
         processInput(deltaTime);
         update(deltaTime);
         render();
+
+        inputManager->update();
 
         if (window->wasResized()) {
             window->resetResizeFlag();

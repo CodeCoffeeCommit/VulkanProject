@@ -1,7 +1,7 @@
 @echo off
 echo Compiling shaders...
 
-set VULKAN_SDK=C:\VulkanSDK\1.4.328.1
+set VULKAN_SDK=C:\VulkanSDK\1.4.335.0
 set GLSLC=%VULKAN_SDK%\Bin\glslc.exe
 
 if not exist compiled mkdir compiled
