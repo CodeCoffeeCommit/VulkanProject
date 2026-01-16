@@ -1,14 +1,17 @@
 #include "InputManager.h"
 #include "Window.h"
+#include "CallbackData.h"
 #include <iostream>
 
 InputManager::InputManager(Window* window) : window(window) {
     glfwWindow = window->getHandle();
 
-    // Set user pointer to this instance
-    glfwSetWindowUserPointer(glfwWindow, this);
+    // Register this InputManager in the shared callback data
+    // (Window already set the user pointer, we just add ourselves to it)
+    CallbackData* callbackData = window->getCallbackData();
+    callbackData->inputManager = this;
 
-    // Set callbacks
+    // Set callbacks - they will use the shared CallbackData
     glfwSetKeyCallback(glfwWindow, keyCallback);
     glfwSetMouseButtonCallback(glfwWindow, mouseButtonCallback);
     glfwSetCursorPosCallback(glfwWindow, cursorPositionCallback);
@@ -23,6 +26,13 @@ InputManager::InputManager(Window* window) : window(window) {
 }
 
 InputManager::~InputManager() {
+    // Unregister from callback data
+    if (window) {
+        CallbackData* callbackData = window->getCallbackData();
+        if (callbackData) {
+            callbackData->inputManager = nullptr;
+        }
+    }
     std::cout << "[OK] Input manager destroyed" << std::endl;
 }
 
@@ -74,10 +84,12 @@ bool InputManager::isMouseButtonJustReleased(int button) const {
     return it != mouseButtonsJustReleased.end() && it->second;
 }
 
-// Static callbacks
+// Static callbacks - now use shared CallbackData
 void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    auto* input = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
-    if (!input) return;
+    auto* data = static_cast<CallbackData*>(glfwGetWindowUserPointer(window));
+    if (!data || !data->inputManager) return;
+
+    InputManager* input = data->inputManager;
 
     if (action == GLFW_PRESS) {
         input->keysPressed[key] = true;
@@ -90,8 +102,10 @@ void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int ac
 }
 
 void InputManager::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
-    auto* input = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
-    if (!input) return;
+    auto* data = static_cast<CallbackData*>(glfwGetWindowUserPointer(window));
+    if (!data || !data->inputManager) return;
+
+    InputManager* input = data->inputManager;
 
     if (action == GLFW_PRESS) {
         input->mouseButtonsPressed[button] = true;
@@ -104,8 +118,10 @@ void InputManager::mouseButtonCallback(GLFWwindow* window, int button, int actio
 }
 
 void InputManager::cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
-    auto* input = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
-    if (!input) return;
+    auto* data = static_cast<CallbackData*>(glfwGetWindowUserPointer(window));
+    if (!data || !data->inputManager) return;
+
+    InputManager* input = data->inputManager;
 
     input->mouseX = xpos;
     input->mouseY = ypos;
@@ -118,8 +134,10 @@ void InputManager::cursorPositionCallback(GLFWwindow* window, double xpos, doubl
 }
 
 void InputManager::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
-    auto* input = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
-    if (!input) return;
+    auto* data = static_cast<CallbackData*>(glfwGetWindowUserPointer(window));
+    if (!data || !data->inputManager) return;
+
+    InputManager* input = data->inputManager;
 
     input->scrollX = xoffset;
     input->scrollY = yoffset;

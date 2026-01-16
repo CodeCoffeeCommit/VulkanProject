@@ -21,8 +21,11 @@ Window::Window(int width, int height, const std::string& title)
         throw std::runtime_error("Failed to create GLFW window!");
     }
 
-    // Set user pointer for callbacks
-    glfwSetWindowUserPointer(window, this);
+    // Set up callback data - Window registers itself
+    callbackData.window = this;
+
+    // Set user pointer to shared callback data
+    glfwSetWindowUserPointer(window, &callbackData);
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 
     std::cout << "[OK] Window created (" << width << "x" << height << ")" << std::endl;
@@ -50,8 +53,11 @@ VkExtent2D Window::getExtent() const {
 }
 
 void Window::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
-    auto app = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-    app->framebufferResized = true;
-    app->width = width;
-    app->height = height;
+    // Get the shared callback data
+    auto* data = reinterpret_cast<CallbackData*>(glfwGetWindowUserPointer(window));
+    if (data && data->window) {
+        data->window->framebufferResized = true;
+        data->window->width = width;
+        data->window->height = height;
+    }
 }

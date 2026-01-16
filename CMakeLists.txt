@@ -64,6 +64,7 @@ add_executable(${PROJECT_NAME}
     src/core/Window.h
     src/core/InputManager.cpp
     src/core/InputManager.h
+    src/core/CallbackData.h          
     src/core/Camera.cpp
     src/core/Camera.h
     src/core/Event.h
@@ -100,7 +101,7 @@ add_executable(${PROJECT_NAME}
     src/render/Primitives.h
     src/render/UniformBuffer.cpp
     src/render/UniformBuffer.h
-)
+ "src/core/CallbackData.h")
 
 # Make sure shaders are built before the main executable
 add_dependencies(${PROJECT_NAME} Shaders)

@@ -3,6 +3,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <string>
+#include "CallbackData.h"
 
 class Window {
 public:
@@ -23,6 +24,9 @@ public:
     bool wasResized() const { return framebufferResized; }
     void resetResizeFlag() { framebufferResized = false; }
 
+    // Callback data access (for InputManager to register)
+    CallbackData* getCallbackData() { return &callbackData; }
+
 private:
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
@@ -31,4 +35,7 @@ private:
     int height;
     std::string title;
     bool framebufferResized = false;
+
+    // Shared callback data - Window owns this
+    CallbackData callbackData;
 };

@@ -5,6 +5,7 @@
 #include <unordered_map>
 
 class Window;
+struct CallbackData;
 
 class InputManager {
 public:
