@@ -10,6 +10,49 @@ find_package(Vulkan REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(glm REQUIRED)
 
+# Find glslc shader compiler (comes with Vulkan SDK)
+find_program(GLSLC glslc HINTS 
+    "$ENV{VULKAN_SDK}/Bin"
+    "$ENV{VK_SDK_PATH}/Bin"
+)
+
+if(NOT GLSLC)
+    message(FATAL_ERROR "glslc not found! Make sure Vulkan SDK is installed.")
+endif()
+
+message(STATUS "Found glslc: ${GLSLC}")
+
+# Define shader sources
+set(SHADER_SOURCES
+    ${CMAKE_SOURCE_DIR}/shaders/workbench.vert
+    ${CMAKE_SOURCE_DIR}/shaders/workbench.frag
+    ${CMAKE_SOURCE_DIR}/shaders/grid.vert
+    ${CMAKE_SOURCE_DIR}/shaders/grid.frag
+)
+
+# Create compiled shaders output directory
+set(SHADER_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/shaders/compiled)
+file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
+
+# Compile each shader
+set(SHADER_SPIRV_FILES "")
+foreach(SHADER ${SHADER_SOURCES})
+    get_filename_component(SHADER_NAME ${SHADER} NAME)
+    set(SPIRV_OUTPUT ${SHADER_OUTPUT_DIR}/${SHADER_NAME}.spv)
+    
+    add_custom_command(
+        OUTPUT ${SPIRV_OUTPUT}
+        COMMAND ${GLSLC} ${SHADER} -o ${SPIRV_OUTPUT}
+        DEPENDS ${SHADER}
+        COMMENT "Compiling shader: ${SHADER_NAME}"
+    )
+    
+    list(APPEND SHADER_SPIRV_FILES ${SPIRV_OUTPUT})
+endforeach()
+
+# Create a target for shaders
+add_custom_target(Shaders DEPENDS ${SHADER_SPIRV_FILES})
+
 # Add executable
 add_executable(${PROJECT_NAME}
     src/main.cpp
@@ -37,7 +80,6 @@ add_executable(${PROJECT_NAME}
     src/world/World.h
     src/world/Primitives.h 
     
-    
     # Components
     src/components/CoreComponents.h
     
@@ -58,7 +100,10 @@ add_executable(${PROJECT_NAME}
     src/render/Primitives.h
     src/render/UniformBuffer.cpp
     src/render/UniformBuffer.h
- "src/world/Primitives.h")
+)
+
+# Make sure shaders are built before the main executable
+add_dependencies(${PROJECT_NAME} Shaders)
 
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -88,7 +133,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG)
 endif()
 
-# Copy shaders to build output directory
+# Copy compiled shaders to build output directory
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders/compiled"
     COMMAND ${CMAKE_COMMAND} -E copy_directory

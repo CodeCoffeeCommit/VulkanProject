@@ -3,8 +3,10 @@
 #include "Selection.h"
 #include "../render/SwapChain.h"
 #include "../render/Renderer.h"
+#include "../render/Mesh.h"  // ADD THIS - for Vertex struct
 #include "../world/Primitives.h"
 #include <iostream>
+cpp#include "../render/Mesh.h"
 
 Application::Application() {
     std::cout << "====================================" << std::endl;
@@ -292,20 +294,79 @@ void Application::render() {
     renderer->drawFrame(camera.get());
 }
 
+// Replace syncECSToRenderer() in src/core/Application.cpp
+
 void Application::syncECSToRenderer() {
-    static bool printed = false;
-    if (!printed) {
-        auto& world = libre::Editor::instance().getWorld();
-        std::cout << "\n[ECS] Entities in scene:" << std::endl;
+    auto& world = libre::Editor::instance().getWorld();
 
-        world.forEach<libre::TransformComponent>([&](libre::EntityID id, libre::TransformComponent& t) {
+    static bool debugPrinted = false;
+    int entityCount = 0;
+
+    // Iterate all entities with MeshComponent
+    world.forEach<libre::MeshComponent>([&](libre::EntityID id, libre::MeshComponent& meshComp) {
+        auto* transform = world.getComponent<libre::TransformComponent>(id);
+        auto* render = world.getComponent<libre::RenderComponent>(id);
+
+        // Debug: Print what we're processing (first frame only)
+        if (!debugPrinted) {
             auto* meta = world.getMetadata(id);
-            std::string name = meta ? meta->name : "Unknown";
-            std::cout << "  - " << name << " (ID: " << id << ") at position ("
-                << t.position.x << ", " << t.position.y << ", " << t.position.z << ")" << std::endl;
-            });
+            std::cout << "[Sync] Entity: " << (meta ? meta->name : "?")
+                << " ID=" << id
+                << " HasTransform=" << (transform ? "Y" : "N")
+                << " HasRender=" << (render ? "Y" : "N")
+                << " Verts=" << meshComp.vertices.size()
+                << " Indices=" << meshComp.indices.size();
+            if (transform) {
+                std::cout << " Pos=(" << transform->position.x << ","
+                    << transform->position.y << ","
+                    << transform->position.z << ")";
+            }
+            std::cout << std::endl;
+        }
 
-        printed = true;
+        // Skip if missing components or not visible
+        if (!transform || !render || !render->visible) {
+            if (!debugPrinted) std::cout << "  -> SKIPPED (missing component or invisible)" << std::endl;
+            return;
+        }
+
+        // Convert MeshVertex (ECS with UV) to Vertex (Vulkan without UV)
+        std::vector<Vertex> vulkanVertices;
+        vulkanVertices.reserve(meshComp.vertices.size());
+
+        for (const auto& v : meshComp.vertices) {
+            Vertex vk;
+            vk.position = v.position;
+            vk.normal = v.normal;
+            vk.color = render->baseColor;
+            vulkanVertices.push_back(vk);
+        }
+
+        // Get or create GPU mesh (cached by entity ID)
+        Mesh* gpuMesh = renderer->getOrCreateMesh(
+            id,
+            vulkanVertices.data(),
+            vulkanVertices.size(),
+            meshComp.indices.data(),
+            meshComp.indices.size()
+        );
+
+        if (!debugPrinted) {
+            std::cout << "  -> Created/cached mesh: " << gpuMesh << std::endl;
+        }
+
+        // Determine color (highlight if selected)
+        bool selected = world.isSelected(id);
+        glm::vec3 color = selected ? glm::vec3(1.0f, 0.6f, 0.2f) : render->baseColor;
+
+        // Submit to render queue
+        renderer->submitMesh(gpuMesh, transform->worldMatrix, color, selected);
+        entityCount++;
+        });
+
+    if (!debugPrinted) {
+        std::cout << "[Sync] Total entities submitted: " << entityCount << std::endl;
+        debugPrinted = true;
     }
 }
 
