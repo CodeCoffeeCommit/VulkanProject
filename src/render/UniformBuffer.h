@@ -7,13 +7,17 @@
 
 class VulkanContext;
 
-// Uniform buffer object for MVP matrices
+// Scene-wide uniform data (doesn't change per-object)
 struct UniformBufferObject {
-    alignas(16) glm::mat4 model;
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 projection;
     alignas(16) glm::vec3 lightDir;
     alignas(16) glm::vec3 viewPos;
+};
+
+// Per-object data sent via push constants
+struct PushConstants {
+    glm::mat4 model;
 };
 
 class UniformBuffer {

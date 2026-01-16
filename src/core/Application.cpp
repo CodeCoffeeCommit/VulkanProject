@@ -265,6 +265,8 @@ void Application::render() {
     renderer->drawFrame(camera.get());
 }
 
+// Replace syncECSToRenderer() in Application.cpp with this:
+
 void Application::syncECSToRenderer() {
     auto& world = libre::Editor::instance().getWorld();
 
@@ -289,13 +291,22 @@ void Application::syncECSToRenderer() {
                     << transform->position.z << ")";
             }
             std::cout << std::endl;
+
+            // Print first 3 vertex positions from ECS mesh
+            std::cout << "  ECS Vertex positions: ";
+            for (size_t i = 0; i < std::min(size_t(3), meshComp.vertices.size()); i++) {
+                auto& v = meshComp.vertices[i];
+                std::cout << "[" << v.position.x << "," << v.position.y << "," << v.position.z << "] ";
+            }
+            std::cout << std::endl;
         }
 
         if (!transform || !render || !render->visible) {
-            if (!debugPrinted) std::cout << "  -> SKIPPED (missing component or invisible)" << std::endl;
+            if (!debugPrinted) std::cout << "  -> SKIPPED" << std::endl;
             return;
         }
 
+        // Convert MeshVertex to Vertex
         std::vector<Vertex> vulkanVertices;
         vulkanVertices.reserve(meshComp.vertices.size());
 
@@ -307,6 +318,16 @@ void Application::syncECSToRenderer() {
             vulkanVertices.push_back(vk);
         }
 
+        if (!debugPrinted) {
+            // Print first 3 converted vertex positions
+            std::cout << "  Vulkan Vertex positions: ";
+            for (size_t i = 0; i < std::min(size_t(3), vulkanVertices.size()); i++) {
+                auto& v = vulkanVertices[i];
+                std::cout << "[" << v.position.x << "," << v.position.y << "," << v.position.z << "] ";
+            }
+            std::cout << std::endl;
+        }
+
         Mesh* gpuMesh = renderer->getOrCreateMesh(
             id,
             vulkanVertices.data(),
@@ -316,7 +337,7 @@ void Application::syncECSToRenderer() {
         );
 
         if (!debugPrinted) {
-            std::cout << "  -> Created/cached mesh: " << gpuMesh << std::endl;
+            std::cout << "  -> Created mesh: " << gpuMesh << std::endl;
         }
 
         bool selected = world.isSelected(id);
@@ -327,7 +348,7 @@ void Application::syncECSToRenderer() {
         });
 
     if (!debugPrinted) {
-        std::cout << "[Sync] Total entities submitted: " << entityCount << std::endl;
+        std::cout << "[Sync] Total: " << entityCount << std::endl;
         debugPrinted = true;
     }
 }
