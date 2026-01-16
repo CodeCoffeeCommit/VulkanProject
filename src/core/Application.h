@@ -7,6 +7,7 @@
 #include <memory>
 #include <chrono>
 
+// Forward declarations instead of includes to avoid circular dependencies
 class SwapChain;
 class Renderer;
 
@@ -23,7 +24,11 @@ private:
     void cleanup();
     void update(float deltaTime);
     void render();
-    void recreateSwapChain();
+
+    // Resize handling
+    void handleResize();
+    bool isMinimized() const;
+
     void processInput(float deltaTime);
 
     // ECS integration
@@ -40,8 +45,8 @@ private:
     std::unique_ptr<Camera> camera;
 
     // Rendering components
-    SwapChain* swapChain = nullptr;
-    Renderer* renderer = nullptr;
+    std::unique_ptr<SwapChain> swapChain;
+    std::unique_ptr<Renderer> renderer;
 
     // Timing
     std::chrono::steady_clock::time_point lastFrameTime;
@@ -55,6 +60,9 @@ private:
     bool altHeld = false;
     double lastMouseX = 0.0;
     double lastMouseY = 0.0;
+
+    // Resize tracking
+    bool framebufferResized = false;
 
     // Configuration
     static constexpr int WINDOW_WIDTH = 1280;

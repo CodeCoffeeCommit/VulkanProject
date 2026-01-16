@@ -27,14 +27,14 @@ public:
     UniformBuffer();
     ~UniformBuffer();
 
-    void create(VulkanContext* context, uint32_t count);
+    void create(VulkanContext* context, uint32_t frameCount);
     void cleanup();
 
-    void update(uint32_t index, const UniformBufferObject& ubo);
+    void update(uint32_t frameIndex, const UniformBufferObject& ubo);
 
-    VkBuffer getBuffer(uint32_t index) const { return uniformBuffers[index]; }
+    VkBuffer getBuffer(uint32_t frameIndex) const { return uniformBuffers[frameIndex]; }
     VkDescriptorSetLayout getDescriptorSetLayout() const { return descriptorSetLayout; }
-    VkDescriptorSet getDescriptorSet(uint32_t index) const { return descriptorSets[index]; }
+    VkDescriptorSet getDescriptorSet(uint32_t frameIndex) const { return descriptorSets[frameIndex]; }
 
 private:
     void createUniformBuffers(uint32_t count);

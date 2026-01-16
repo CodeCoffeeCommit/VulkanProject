@@ -47,18 +47,18 @@ private:
 
     VulkanContext* context = nullptr;
 
-    // Swap chain
+    // Swap chain - INITIALIZED
     VkSwapchainKHR swapChain = VK_NULL_HANDLE;
     std::vector<VkImage> swapChainImages;
     std::vector<VkImageView> swapChainImageViews;
-    VkFormat swapChainImageFormat;
-    VkExtent2D swapChainExtent;
+    VkFormat swapChainImageFormat = VK_FORMAT_UNDEFINED;
+    VkExtent2D swapChainExtent = { 0, 0 };
 
-    // Depth buffer
+    // Depth buffer - INITIALIZED
     VkImage depthImage = VK_NULL_HANDLE;
     VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;
     VkImageView depthImageView = VK_NULL_HANDLE;
-    VkFormat depthFormat;
+    VkFormat depthFormat = VK_FORMAT_UNDEFINED;
 
     // Render pass and framebuffers
     VkRenderPass renderPass = VK_NULL_HANDLE;

@@ -33,6 +33,8 @@ void SwapChain::cleanup() {
 }
 
 void SwapChain::cleanupSwapChain() {
+    if (!context) return;
+
     // Cleanup depth resources
     if (depthImageView != VK_NULL_HANDLE) {
         vkDestroyImageView(context->getDevice(), depthImageView, nullptr);
@@ -67,6 +69,8 @@ void SwapChain::cleanupSwapChain() {
 }
 
 void SwapChain::recreate(GLFWwindow* window) {
+    std::cout << "[SwapChain] Recreating..." << std::endl;
+
     // Handle minimization
     int width = 0, height = 0;
     glfwGetFramebufferSize(window, &width, &height);
@@ -182,7 +186,7 @@ void SwapChain::createRenderPass() {
     colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-    // Depth attachment
+    // Find depth format first
     depthFormat = findDepthFormat();
 
     VkAttachmentDescription depthAttachment{};
@@ -237,6 +241,11 @@ void SwapChain::createRenderPass() {
 }
 
 void SwapChain::createDepthResources() {
+    // Make sure depth format is set
+    if (depthFormat == VK_FORMAT_UNDEFINED) {
+        depthFormat = findDepthFormat();
+    }
+
     createImage(swapChainExtent.width, swapChainExtent.height, depthFormat,
         VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);

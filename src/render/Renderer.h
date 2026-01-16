@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <cstdint>
 
+// Forward declarations
 class VulkanContext;
 class SwapChain;
 class GraphicsPipeline;
@@ -30,8 +31,13 @@ public:
     void init(VulkanContext* context, SwapChain* swapChain);
     void cleanup();
 
-    void drawFrame(Camera* camera);
+    // Returns false if swap chain needs recreation
+    bool drawFrame(Camera* camera);
+
     void waitIdle();
+
+    // Called after swap chain is recreated
+    void onSwapChainRecreated(SwapChain* newSwapChain);
 
     void submitMesh(Mesh* mesh, const glm::mat4& transform,
         const glm::vec3& color = glm::vec3(0.8f), bool selected = false);
@@ -49,6 +55,10 @@ private:
     void createCommandBuffers();
     void createSyncObjects();
     void createSceneObjects();
+
+    // Pipeline management
+    void createPipeline();
+    void cleanupPipeline();
 
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, Camera* camera);
     void updateUniformBuffer(uint32_t currentImage, Camera* camera);
@@ -70,4 +80,6 @@ private:
     std::vector<VkFence> inFlightFences;
 
     uint32_t currentFrame = 0;
+
+    static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 };

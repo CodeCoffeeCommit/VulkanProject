@@ -36,11 +36,11 @@ void Application::init() {
     vulkanContext = std::make_unique<VulkanContext>(window.get());
     vulkanContext->init();
 
-    swapChain = new SwapChain();
+    swapChain = std::make_unique<SwapChain>();
     swapChain->init(vulkanContext.get(), window->getHandle());
 
-    renderer = new Renderer();
-    renderer->init(vulkanContext.get(), swapChain);
+    renderer = std::make_unique<Renderer>();
+    renderer->init(vulkanContext.get(), swapChain.get());
 
     createDefaultScene();
 
@@ -84,38 +84,81 @@ void Application::printControls() {
     std::cout << "Ctrl+Z: Undo" << std::endl;
     std::cout << "Ctrl+Shift+Z: Redo" << std::endl;
     std::cout << "Numpad 1/3/7/0: View shortcuts" << std::endl;
+    std::cout << "F11: Toggle Fullscreen" << std::endl;
     std::cout << "ESC: Exit" << std::endl;
     std::cout << "================\n" << std::endl;
 }
 
+bool Application::isMinimized() const {
+    int width, height;
+    glfwGetFramebufferSize(window->getHandle(), &width, &height);
+    return width == 0 || height == 0;
+}
+
+void Application::handleResize() {
+    // Wait while minimized
+    while (isMinimized()) {
+        glfwWaitEvents();
+    }
+
+    // Wait for GPU to finish
+    renderer->waitIdle();
+
+    // Get new dimensions
+    int width, height;
+    glfwGetFramebufferSize(window->getHandle(), &width, &height);
+
+    std::cout << "[Resize] New size: " << width << "x" << height << std::endl;
+
+    // Update camera aspect ratio
+    camera->setAspectRatio(static_cast<float>(width) / static_cast<float>(height));
+
+    // Recreate swap chain (this also recreates framebuffers)
+    swapChain->recreate(window->getHandle());
+
+    // Renderer needs to know about new swap chain
+    renderer->onSwapChainRecreated(swapChain.get());
+
+    framebufferResized = false;
+}
+
 void Application::mainLoop() {
     while (!window->shouldClose()) {
+        // Calculate delta time
         auto currentTime = std::chrono::steady_clock::now();
         deltaTime = std::chrono::duration<float>(currentTime - lastFrameTime).count();
         lastFrameTime = currentTime;
         fps = 1.0f / deltaTime;
 
+        // Poll events first
         window->pollEvents();
 
+        // FIXED: Check for resize BEFORE rendering
+        if (window->wasResized() || framebufferResized) {
+            window->resetResizeFlag();
+            handleResize();
+            continue;  // Skip this frame, start fresh
+        }
+
+        // Skip rendering if minimized
+        if (isMinimized()) {
+            continue;
+        }
+
+        // Process input
         processInput(deltaTime);
+
+        // Update game state
         update(deltaTime);
+
+        // Render - may set framebufferResized if swap chain is out of date
         render();
 
+        // Update input state for next frame
         inputManager->update();
-
-        if (window->wasResized()) {
-            window->resetResizeFlag();
-
-            int width, height;
-            glfwGetFramebufferSize(window->getHandle(), &width, &height);
-
-            if (width > 0 && height > 0) {
-                camera->setAspectRatio(static_cast<float>(width) / static_cast<float>(height));
-                recreateSwapChain();
-            }
-        }
     }
 
+    // Wait for GPU before cleanup
     renderer->waitIdle();
 }
 
@@ -124,6 +167,36 @@ void Application::processInput(float dt) {
 
     if (inputManager->isKeyPressed(GLFW_KEY_ESCAPE)) {
         glfwSetWindowShouldClose(window->getHandle(), GLFW_TRUE);
+    }
+
+    // Toggle fullscreen with F11
+    if (inputManager->isKeyJustPressed(GLFW_KEY_F11)) {
+        static bool isFullscreen = false;
+        static int savedX, savedY, savedWidth, savedHeight;
+
+        if (!isFullscreen) {
+            // Save current window position/size
+            glfwGetWindowPos(window->getHandle(), &savedX, &savedY);
+            glfwGetWindowSize(window->getHandle(), &savedWidth, &savedHeight);
+
+            // Get primary monitor
+            GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+            // Go fullscreen
+            glfwSetWindowMonitor(window->getHandle(), monitor, 0, 0,
+                mode->width, mode->height, mode->refreshRate);
+            isFullscreen = true;
+        }
+        else {
+            // Restore windowed mode
+            glfwSetWindowMonitor(window->getHandle(), nullptr,
+                savedX, savedY, savedWidth, savedHeight, 0);
+            isFullscreen = false;
+        }
+
+        // Mark for resize handling
+        framebufferResized = true;
     }
 
     shiftHeld = inputManager->isKeyPressed(GLFW_KEY_LEFT_SHIFT) ||
@@ -262,10 +335,12 @@ void Application::updateTransforms() {
 
 void Application::render() {
     syncECSToRenderer();
-    renderer->drawFrame(camera.get());
-}
 
-// Replace syncECSToRenderer() in Application.cpp with this:
+    // drawFrame returns false if swap chain needs recreation
+    if (!renderer->drawFrame(camera.get())) {
+        framebufferResized = true;
+    }
+}
 
 void Application::syncECSToRenderer() {
     auto& world = libre::Editor::instance().getWorld();
@@ -281,28 +356,11 @@ void Application::syncECSToRenderer() {
             auto* meta = world.getMetadata(id);
             std::cout << "[Sync] Entity: " << (meta ? meta->name : "?")
                 << " ID=" << id
-                << " HasTransform=" << (transform ? "Y" : "N")
-                << " HasRender=" << (render ? "Y" : "N")
                 << " Verts=" << meshComp.vertices.size()
-                << " Indices=" << meshComp.indices.size();
-            if (transform) {
-                std::cout << " Pos=(" << transform->position.x << ","
-                    << transform->position.y << ","
-                    << transform->position.z << ")";
-            }
-            std::cout << std::endl;
-
-            // Print first 3 vertex positions from ECS mesh
-            std::cout << "  ECS Vertex positions: ";
-            for (size_t i = 0; i < std::min(size_t(3), meshComp.vertices.size()); i++) {
-                auto& v = meshComp.vertices[i];
-                std::cout << "[" << v.position.x << "," << v.position.y << "," << v.position.z << "] ";
-            }
-            std::cout << std::endl;
+                << " Indices=" << meshComp.indices.size() << std::endl;
         }
 
         if (!transform || !render || !render->visible) {
-            if (!debugPrinted) std::cout << "  -> SKIPPED" << std::endl;
             return;
         }
 
@@ -318,16 +376,6 @@ void Application::syncECSToRenderer() {
             vulkanVertices.push_back(vk);
         }
 
-        if (!debugPrinted) {
-            // Print first 3 converted vertex positions
-            std::cout << "  Vulkan Vertex positions: ";
-            for (size_t i = 0; i < std::min(size_t(3), vulkanVertices.size()); i++) {
-                auto& v = vulkanVertices[i];
-                std::cout << "[" << v.position.x << "," << v.position.y << "," << v.position.z << "] ";
-            }
-            std::cout << std::endl;
-        }
-
         Mesh* gpuMesh = renderer->getOrCreateMesh(
             id,
             vulkanVertices.data(),
@@ -335,10 +383,6 @@ void Application::syncECSToRenderer() {
             meshComp.indices.data(),
             meshComp.indices.size()
         );
-
-        if (!debugPrinted) {
-            std::cout << "  -> Created mesh: " << gpuMesh << std::endl;
-        }
 
         bool selected = world.isSelected(id);
         glm::vec3 color = selected ? glm::vec3(1.0f, 0.6f, 0.2f) : render->baseColor;
@@ -348,14 +392,9 @@ void Application::syncECSToRenderer() {
         });
 
     if (!debugPrinted) {
-        std::cout << "[Sync] Total: " << entityCount << std::endl;
+        std::cout << "[Sync] Total: " << entityCount << " entities" << std::endl;
         debugPrinted = true;
     }
-}
-
-void Application::recreateSwapChain() {
-    renderer->waitIdle();
-    swapChain->recreate(window->getHandle());
 }
 
 void Application::cleanup() {
@@ -364,14 +403,12 @@ void Application::cleanup() {
     if (renderer) {
         renderer->waitIdle();
         renderer->cleanup();
-        delete renderer;
-        renderer = nullptr;
+        renderer.reset();
     }
 
     if (swapChain) {
         swapChain->cleanup();
-        delete swapChain;
-        swapChain = nullptr;
+        swapChain.reset();
     }
 
     libre::Editor::instance().shutdown();

@@ -5,7 +5,6 @@
 #include "UniformBuffer.h"
 #include "Grid.h"
 #include "Mesh.h"
-#include "Primitives.h"
 #include "../core/Camera.h"
 #include <iostream>
 #include <stdexcept>
@@ -22,11 +21,9 @@ void Renderer::init(VulkanContext* ctx, SwapChain* swap) {
     createCommandPool();
 
     uniformBuffer = new UniformBuffer();
-    uniformBuffer->create(context, swapChain->getImageCount());
+    uniformBuffer->create(context, MAX_FRAMES_IN_FLIGHT);
 
-    pipeline = new GraphicsPipeline();
-    pipeline->init(context, swapChain, uniformBuffer);
-
+    createPipeline();
     createCommandBuffers();
     createSyncObjects();
     createSceneObjects();
@@ -34,7 +31,34 @@ void Renderer::init(VulkanContext* ctx, SwapChain* swap) {
     std::cout << "[OK] Renderer initialized" << std::endl;
 }
 
+void Renderer::createPipeline() {
+    pipeline = new GraphicsPipeline();
+    pipeline->init(context, swapChain, uniformBuffer);
+}
+
+void Renderer::cleanupPipeline() {
+    if (pipeline) {
+        pipeline->cleanup();
+        delete pipeline;
+        pipeline = nullptr;
+    }
+}
+
+void Renderer::onSwapChainRecreated(SwapChain* newSwapChain) {
+    std::cout << "[Renderer] Updating for new swap chain..." << std::endl;
+
+    this->swapChain = newSwapChain;
+
+    // Recreate pipeline with new render pass
+    cleanupPipeline();
+    createPipeline();
+
+    std::cout << "[Renderer] Updated for new swap chain" << std::endl;
+}
+
 void Renderer::cleanup() {
+    if (!context) return;
+
     vkDeviceWaitIdle(context->getDevice());
 
     for (auto& [id, mesh] : meshCache) {
@@ -48,27 +72,38 @@ void Renderer::cleanup() {
     if (grid) {
         grid->cleanup();
         delete grid;
+        grid = nullptr;
     }
 
-    if (pipeline) {
-        pipeline->cleanup();
-        delete pipeline;
-    }
+    cleanupPipeline();
 
     if (uniformBuffer) {
         uniformBuffer->cleanup();
         delete uniformBuffer;
+        uniformBuffer = nullptr;
     }
 
-    for (size_t i = 0; i < imageAvailableSemaphores.size(); i++) {
-        vkDestroySemaphore(context->getDevice(), imageAvailableSemaphores[i], nullptr);
-        vkDestroySemaphore(context->getDevice(), renderFinishedSemaphores[i], nullptr);
-        vkDestroyFence(context->getDevice(), inFlightFences[i], nullptr);
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        if (i < imageAvailableSemaphores.size() && imageAvailableSemaphores[i] != VK_NULL_HANDLE) {
+            vkDestroySemaphore(context->getDevice(), imageAvailableSemaphores[i], nullptr);
+        }
+        if (i < renderFinishedSemaphores.size() && renderFinishedSemaphores[i] != VK_NULL_HANDLE) {
+            vkDestroySemaphore(context->getDevice(), renderFinishedSemaphores[i], nullptr);
+        }
+        if (i < inFlightFences.size() && inFlightFences[i] != VK_NULL_HANDLE) {
+            vkDestroyFence(context->getDevice(), inFlightFences[i], nullptr);
+        }
     }
+    imageAvailableSemaphores.clear();
+    renderFinishedSemaphores.clear();
+    inFlightFences.clear();
 
     if (commandPool != VK_NULL_HANDLE) {
         vkDestroyCommandPool(context->getDevice(), commandPool, nullptr);
+        commandPool = VK_NULL_HANDLE;
     }
+
+    std::cout << "[OK] Renderer cleaned up" << std::endl;
 }
 
 void Renderer::createSceneObjects() {
@@ -119,9 +154,11 @@ void Renderer::removeMesh(uint64_t entityId) {
     }
 }
 
-void Renderer::drawFrame(Camera* camera) {
+bool Renderer::drawFrame(Camera* camera) {
+    // Wait for previous frame with this index to complete
     vkWaitForFences(context->getDevice(), 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
+    // Acquire next image
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(
         context->getDevice(),
@@ -132,21 +169,26 @@ void Renderer::drawFrame(Camera* camera) {
         &imageIndex
     );
 
+    // Check if swap chain needs recreation
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        return;
+        std::cout << "[Renderer] Swap chain out of date" << std::endl;
+        return false;
     }
     else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("Failed to acquire swap chain image!");
     }
 
+    // Only reset fence if we're actually submitting work
     vkResetFences(context->getDevice(), 1, &inFlightFences[currentFrame]);
 
-    // Update scene-wide uniform buffer ONCE per frame
+    // Update uniform buffer
     updateUniformBuffer(currentFrame, camera);
 
+    // Record command buffer
     vkResetCommandBuffer(commandBuffers[currentFrame], 0);
     recordCommandBuffer(commandBuffers[currentFrame], imageIndex, camera);
 
+    // Submit command buffer
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -166,6 +208,7 @@ void Renderer::drawFrame(Camera* camera) {
         throw std::runtime_error("Failed to submit draw command buffer!");
     }
 
+    // Present
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
@@ -178,15 +221,22 @@ void Renderer::drawFrame(Camera* camera) {
 
     result = vkQueuePresentKHR(context->getPresentQueue(), &presentInfo);
 
+    // Check if swap chain needs recreation
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        // Handle resize
+        std::cout << "[Renderer] Swap chain suboptimal or out of date after present" << std::endl;
+        return false;
     }
     else if (result != VK_SUCCESS) {
         throw std::runtime_error("Failed to present swap chain image!");
     }
 
-    currentFrame = (currentFrame + 1) % swapChain->getImageCount();
+    // Advance frame index
+    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+
+    // Clear render queue for next frame
     clearSubmissions();
+
+    return true;
 }
 
 void Renderer::updateUniformBuffer(uint32_t currentImage, Camera* camera) {
@@ -200,7 +250,9 @@ void Renderer::updateUniformBuffer(uint32_t currentImage, Camera* camera) {
 }
 
 void Renderer::waitIdle() {
-    vkDeviceWaitIdle(context->getDevice());
+    if (context && context->getDevice()) {
+        vkDeviceWaitIdle(context->getDevice());
+    }
 }
 
 void Renderer::createCommandPool() {
@@ -215,7 +267,7 @@ void Renderer::createCommandPool() {
 }
 
 void Renderer::createCommandBuffers() {
-    commandBuffers.resize(swapChain->getImageCount());
+    commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -229,11 +281,9 @@ void Renderer::createCommandBuffers() {
 }
 
 void Renderer::createSyncObjects() {
-    size_t imageCount = swapChain->getImageCount();
-
-    imageAvailableSemaphores.resize(imageCount);
-    renderFinishedSemaphores.resize(imageCount);
-    inFlightFences.resize(imageCount);
+    imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -242,7 +292,7 @@ void Renderer::createSyncObjects() {
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (size_t i = 0; i < imageCount; i++) {
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         if (vkCreateSemaphore(context->getDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
             vkCreateSemaphore(context->getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
             vkCreateFence(context->getDevice(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
@@ -275,6 +325,7 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+    // Set dynamic viewport and scissor
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
@@ -291,9 +342,7 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 
     VkDescriptorSet descriptorSet = uniformBuffer->getDescriptorSet(currentFrame);
 
-    // ========================================
-    // DRAW GRID
-    // ========================================
+    // Draw grid
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getGridPipeline());
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
         pipeline->getGridPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
@@ -306,17 +355,10 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     grid->bind(commandBuffer);
     grid->draw(commandBuffer);
 
-    // ========================================
-    // DRAW MESHES
-    // ========================================
+    // Draw meshes
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getMeshPipeline());
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
         pipeline->getMeshPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
-
-    static bool debugPrinted = false;
-    if (!debugPrinted) {
-        std::cout << "[Render] Drawing " << renderQueue.size() << " meshes" << std::endl;
-    }
 
     for (const auto& obj : renderQueue) {
         if (obj.mesh) {
@@ -325,20 +367,9 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
             vkCmdPushConstants(commandBuffer, pipeline->getMeshPipelineLayout(),
                 VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &push);
 
-            if (!debugPrinted) {
-                std::cout << "  - Mesh at ("
-                    << obj.transform[3][0] << ", "
-                    << obj.transform[3][1] << ", "
-                    << obj.transform[3][2] << ")" << std::endl;
-            }
-
             obj.mesh->bind(commandBuffer);
             obj.mesh->draw(commandBuffer);
         }
-    }
-
-    if (!debugPrinted) {
-        debugPrinted = true;
     }
 
     vkCmdEndRenderPass(commandBuffer);
