@@ -35,7 +35,8 @@ add_executable(${PROJECT_NAME}
     src/world/RelationshipStore.h
     src/world/World.cpp
     src/world/World.h
-    src/world/Primitives.h
+    src/world/Primitives.h 
+    
     
     # Components
     src/components/CoreComponents.h
@@ -57,7 +58,7 @@ add_executable(${PROJECT_NAME}
     src/render/Primitives.h
     src/render/UniformBuffer.cpp
     src/render/UniformBuffer.h
-)
+ "src/world/Primitives.h")
 
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
