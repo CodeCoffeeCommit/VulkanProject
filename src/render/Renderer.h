@@ -4,6 +4,8 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <vector>
+#include <unordered_map>
+#include <cstdint>
 
 class VulkanContext;
 class SwapChain;
@@ -12,6 +14,13 @@ class UniformBuffer;
 class Grid;
 class Mesh;
 class Camera;
+
+struct RenderObject {
+    Mesh* mesh = nullptr;
+    glm::mat4 transform = glm::mat4(1.0f);
+    glm::vec3 color = glm::vec3(0.8f);
+    bool selected = false;
+};
 
 class Renderer {
 public:
@@ -24,9 +33,14 @@ public:
     void drawFrame(Camera* camera);
     void waitIdle();
 
-    // Scene objects
+    void submitMesh(Mesh* mesh, const glm::mat4& transform, const glm::vec3& color = glm::vec3(0.8f), bool selected = false);
+    void clearSubmissions();
+
+    Mesh* getOrCreateMesh(uint64_t entityId, const void* vertexData, size_t vertexCount, const uint32_t* indexData, size_t indexCount);
+    void removeMesh(uint64_t entityId);
+
     Grid* getGrid() { return grid; }
-    Mesh* getCube() { return cube; }
+    VulkanContext* getContext() { return context; }
 
 private:
     void createCommandPool();
@@ -34,17 +48,17 @@ private:
     void createSyncObjects();
     void createSceneObjects();
 
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
-    void updateUniformBuffer(uint32_t currentImage, Camera* camera);
+    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, Camera* camera);
+    void updateUniformBuffer(uint32_t currentImage, Camera* camera, const glm::mat4& model);
 
     VulkanContext* context = nullptr;
     SwapChain* swapChain = nullptr;
     GraphicsPipeline* pipeline = nullptr;
     UniformBuffer* uniformBuffer = nullptr;
 
-    // Scene objects
     Grid* grid = nullptr;
-    Mesh* cube = nullptr;
+    std::unordered_map<uint64_t, Mesh*> meshCache;
+    std::vector<RenderObject> renderQueue;
 
     VkCommandPool commandPool = VK_NULL_HANDLE;
     std::vector<VkCommandBuffer> commandBuffers;

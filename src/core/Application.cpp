@@ -293,9 +293,20 @@ void Application::render() {
 }
 
 void Application::syncECSToRenderer() {
-    // In Phase 2, we'll update the renderer to use ECS data directly
-    // For now, the renderer uses its own Mesh objects
-    // This function will bridge ECS MeshComponents to Vulkan buffers
+    static bool printed = false;
+    if (!printed) {
+        auto& world = libre::Editor::instance().getWorld();
+        std::cout << "\n[ECS] Entities in scene:" << std::endl;
+
+        world.forEach<libre::TransformComponent>([&](libre::EntityID id, libre::TransformComponent& t) {
+            auto* meta = world.getMetadata(id);
+            std::string name = meta ? meta->name : "Unknown";
+            std::cout << "  - " << name << " (ID: " << id << ") at position ("
+                << t.position.x << ", " << t.position.y << ", " << t.position.z << ")" << std::endl;
+            });
+
+        printed = true;
+    }
 }
 
 void Application::recreateSwapChain() {
