@@ -3,10 +3,9 @@
 #include "Selection.h"
 #include "../render/SwapChain.h"
 #include "../render/Renderer.h"
-#include "../render/Mesh.h"  // ADD THIS - for Vertex struct
+#include "../render/Mesh.h"
 #include "../world/Primitives.h"
 #include <iostream>
-cpp#include "../render/Mesh.h"
 
 Application::Application() {
     std::cout << "====================================" << std::endl;
@@ -29,10 +28,8 @@ void Application::init() {
     window = std::make_unique<Window>(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE);
     inputManager = std::make_unique<InputManager>(window.get());
 
-    // Initialize Editor (ECS)
     libre::Editor::instance().initialize();
 
-    // Create camera
     camera = std::make_unique<Camera>();
     camera->setAspectRatio(static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT));
 
@@ -45,7 +42,6 @@ void Application::init() {
     renderer = new Renderer();
     renderer->init(vulkanContext.get(), swapChain);
 
-    // Create default scene objects in ECS
     createDefaultScene();
 
     lastFrameTime = std::chrono::steady_clock::now();
@@ -57,17 +53,14 @@ void Application::init() {
 void Application::createDefaultScene() {
     auto& world = libre::Editor::instance().getWorld();
 
-    // Create a cube
     auto cube = libre::Primitives::createCube(world, 2.0f, "DefaultCube");
 
-    // Create a sphere  
     auto sphere = libre::Primitives::createSphere(world, 1.0f, 32, 16, "Sphere");
     if (auto* t = sphere.get<libre::TransformComponent>()) {
         t->position = glm::vec3(3.0f, 0.0f, 0.0f);
         t->dirty = true;
     }
 
-    // Create a cylinder
     auto cylinder = libre::Primitives::createCylinder(world, 0.5f, 2.0f, 32, "Cylinder");
     if (auto* t = cylinder.get<libre::TransformComponent>()) {
         t->position = glm::vec3(-3.0f, 0.0f, 0.0f);
@@ -129,12 +122,10 @@ void Application::mainLoop() {
 void Application::processInput(float dt) {
     auto& editor = libre::Editor::instance();
 
-    // ESC to exit
     if (inputManager->isKeyPressed(GLFW_KEY_ESCAPE)) {
         glfwSetWindowShouldClose(window->getHandle(), GLFW_TRUE);
     }
 
-    // Track modifier keys
     shiftHeld = inputManager->isKeyPressed(GLFW_KEY_LEFT_SHIFT) ||
         inputManager->isKeyPressed(GLFW_KEY_RIGHT_SHIFT);
     ctrlHeld = inputManager->isKeyPressed(GLFW_KEY_LEFT_CONTROL) ||
@@ -142,7 +133,6 @@ void Application::processInput(float dt) {
     altHeld = inputManager->isKeyPressed(GLFW_KEY_LEFT_ALT) ||
         inputManager->isKeyPressed(GLFW_KEY_RIGHT_ALT);
 
-    // Undo/Redo
     if (ctrlHeld && inputManager->isKeyJustPressed(GLFW_KEY_Z)) {
         if (shiftHeld) {
             editor.redo();
@@ -154,13 +144,11 @@ void Application::processInput(float dt) {
         }
     }
 
-    // Delete selected
     if (inputManager->isKeyJustPressed(GLFW_KEY_DELETE) ||
         inputManager->isKeyJustPressed(GLFW_KEY_X)) {
         editor.deleteSelected();
     }
 
-    // Select All / Deselect All
     if (inputManager->isKeyJustPressed(GLFW_KEY_A)) {
         if (altHeld) {
             editor.deselectAll();
@@ -170,20 +158,17 @@ void Application::processInput(float dt) {
         }
     }
 
-    // View shortcuts (numpad)
     if (inputManager->isKeyJustPressed(GLFW_KEY_KP_1)) camera->setFront();
     if (inputManager->isKeyJustPressed(GLFW_KEY_KP_3)) camera->setRight();
     if (inputManager->isKeyJustPressed(GLFW_KEY_KP_7)) camera->setTop();
     if (inputManager->isKeyJustPressed(GLFW_KEY_KP_0)) camera->reset();
 
-    // Left click for selection
     if (inputManager->isMouseButtonJustPressed(GLFW_MOUSE_BUTTON_LEFT)) {
-        if (!middleMouseDown) {  // Don't select while orbiting
+        if (!middleMouseDown) {
             handleSelection();
         }
     }
 
-    // Middle mouse button for camera control
     if (inputManager->isMouseButtonJustPressed(GLFW_MOUSE_BUTTON_MIDDLE)) {
         middleMouseDown = true;
         lastMouseX = inputManager->getMouseX();
@@ -193,7 +178,6 @@ void Application::processInput(float dt) {
         middleMouseDown = false;
     }
 
-    // Camera orbit/pan with middle mouse
     if (middleMouseDown) {
         double currentX = inputManager->getMouseX();
         double currentY = inputManager->getMouseY();
@@ -211,7 +195,6 @@ void Application::processInput(float dt) {
         lastMouseY = currentY;
     }
 
-    // Scroll wheel for zoom
     double scrollY = inputManager->getScrollY();
     if (scrollY != 0.0) {
         camera->zoom(static_cast<float>(scrollY));
@@ -228,11 +211,9 @@ void Application::handleSelection() {
     float mouseX = static_cast<float>(inputManager->getMouseX());
     float mouseY = static_cast<float>(inputManager->getMouseY());
 
-    // Create ray from mouse position
     libre::Ray ray = libre::SelectionSystem::screenToRay(
         *camera, mouseX, mouseY, width, height);
 
-    // Perform raycast
     libre::HitResult hit = libre::SelectionSystem::raycast(world, ray);
 
     if (hit.hit()) {
@@ -250,32 +231,25 @@ void Application::handleSelection() {
 }
 
 void Application::update(float dt) {
-    // Update Editor (processes commands, events)
     libre::Editor::instance().update(dt);
-
-    // Update transforms
     updateTransforms();
 }
 
 void Application::updateTransforms() {
     auto& world = libre::Editor::instance().getWorld();
 
-    // Update transform matrices
     world.forEach<libre::TransformComponent>([&](libre::EntityID id, libre::TransformComponent& t) {
         if (t.dirty) {
-            // For root entities, local = world
             if (world.getParent(id) == libre::INVALID_ENTITY) {
                 t.worldMatrix = t.getLocalMatrix();
             }
             else {
-                // Get parent transform
                 auto* parentT = world.getComponent<libre::TransformComponent>(world.getParent(id));
                 if (parentT) {
                     t.worldMatrix = parentT->worldMatrix * t.getLocalMatrix();
                 }
             }
 
-            // Update bounds
             auto* bounds = world.getComponent<libre::BoundsComponent>(id);
             if (bounds) {
                 bounds->updateWorldBounds(t.worldMatrix);
@@ -287,14 +261,9 @@ void Application::updateTransforms() {
 }
 
 void Application::render() {
-    // Sync ECS data to renderer
     syncECSToRenderer();
-
-    // Draw frame
     renderer->drawFrame(camera.get());
 }
-
-// Replace syncECSToRenderer() in src/core/Application.cpp
 
 void Application::syncECSToRenderer() {
     auto& world = libre::Editor::instance().getWorld();
@@ -302,12 +271,10 @@ void Application::syncECSToRenderer() {
     static bool debugPrinted = false;
     int entityCount = 0;
 
-    // Iterate all entities with MeshComponent
     world.forEach<libre::MeshComponent>([&](libre::EntityID id, libre::MeshComponent& meshComp) {
         auto* transform = world.getComponent<libre::TransformComponent>(id);
         auto* render = world.getComponent<libre::RenderComponent>(id);
 
-        // Debug: Print what we're processing (first frame only)
         if (!debugPrinted) {
             auto* meta = world.getMetadata(id);
             std::cout << "[Sync] Entity: " << (meta ? meta->name : "?")
@@ -324,13 +291,11 @@ void Application::syncECSToRenderer() {
             std::cout << std::endl;
         }
 
-        // Skip if missing components or not visible
         if (!transform || !render || !render->visible) {
             if (!debugPrinted) std::cout << "  -> SKIPPED (missing component or invisible)" << std::endl;
             return;
         }
 
-        // Convert MeshVertex (ECS with UV) to Vertex (Vulkan without UV)
         std::vector<Vertex> vulkanVertices;
         vulkanVertices.reserve(meshComp.vertices.size());
 
@@ -342,7 +307,6 @@ void Application::syncECSToRenderer() {
             vulkanVertices.push_back(vk);
         }
 
-        // Get or create GPU mesh (cached by entity ID)
         Mesh* gpuMesh = renderer->getOrCreateMesh(
             id,
             vulkanVertices.data(),
@@ -355,11 +319,9 @@ void Application::syncECSToRenderer() {
             std::cout << "  -> Created/cached mesh: " << gpuMesh << std::endl;
         }
 
-        // Determine color (highlight if selected)
         bool selected = world.isSelected(id);
         glm::vec3 color = selected ? glm::vec3(1.0f, 0.6f, 0.2f) : render->baseColor;
 
-        // Submit to render queue
         renderer->submitMesh(gpuMesh, transform->worldMatrix, color, selected);
         entityCount++;
         });
@@ -391,7 +353,6 @@ void Application::cleanup() {
         swapChain = nullptr;
     }
 
-    // Shutdown Editor
     libre::Editor::instance().shutdown();
 
     if (vulkanContext) {

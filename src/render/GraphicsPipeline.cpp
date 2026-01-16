@@ -38,14 +38,13 @@ void GraphicsPipeline::cleanup() {
 }
 
 void GraphicsPipeline::createMeshPipeline() {
-    // Load shaders
-    auto vertShaderCode = readFile("shaders/compiled/grid.vert.spv");
-    auto fragShaderCode = readFile("shaders/compiled/grid.frag.spv");
+    // FIXED: Use workbench shaders for mesh rendering (has lighting, expects 3 vertex attributes)
+    auto vertShaderCode = readFile("shaders/compiled/workbench.vert.spv");
+    auto fragShaderCode = readFile("shaders/compiled/workbench.frag.spv");
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
 
-    // Shader stages
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -60,7 +59,7 @@ void GraphicsPipeline::createMeshPipeline() {
 
     VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
-    // Vertex input - use Vertex format
+    // Vertex input - use Vertex format (position, normal, color)
     auto bindingDescription = Vertex::getBindingDescription();
     auto attributeDescriptions = Vertex::getAttributeDescriptions();
 
@@ -77,13 +76,11 @@ void GraphicsPipeline::createMeshPipeline() {
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-    // Viewport and scissor (dynamic)
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportState.viewportCount = 1;
     viewportState.scissorCount = 1;
 
-    // Dynamic states
     std::vector<VkDynamicState> dynamicStates = {
         VK_DYNAMIC_STATE_VIEWPORT,
         VK_DYNAMIC_STATE_SCISSOR
@@ -94,24 +91,21 @@ void GraphicsPipeline::createMeshPipeline() {
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
-    // Rasterizer
     VkPipelineRasterizationStateCreateInfo rasterizer{};
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.cullMode = VK_CULL_MODE_NONE;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
 
-    // Multisampling
     VkPipelineMultisampleStateCreateInfo multisampling{};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.sampleShadingEnable = VK_FALSE;
     multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-    // Depth stencil
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.depthTestEnable = VK_TRUE;
@@ -120,7 +114,6 @@ void GraphicsPipeline::createMeshPipeline() {
     depthStencil.depthBoundsTestEnable = VK_FALSE;
     depthStencil.stencilTestEnable = VK_FALSE;
 
-    // Color blending
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
     colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
         VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -132,7 +125,6 @@ void GraphicsPipeline::createMeshPipeline() {
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &colorBlendAttachment;
 
-    // Pipeline layout with descriptor set
     VkDescriptorSetLayout setLayout = uniformBuffer->getDescriptorSetLayout();
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
@@ -145,7 +137,6 @@ void GraphicsPipeline::createMeshPipeline() {
         throw std::runtime_error("Failed to create mesh pipeline layout!");
     }
 
-    // Create pipeline
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.stageCount = 2;
@@ -172,9 +163,9 @@ void GraphicsPipeline::createMeshPipeline() {
 }
 
 void GraphicsPipeline::createGridPipeline() {
-    // Load grid shaders
-    auto vertShaderCode = readFile("shaders/compiled/workbench.vert.spv");
-    auto fragShaderCode = readFile("shaders/compiled/workbench.frag.spv");
+    // FIXED: Use grid shaders for line rendering (simple, expects 2 vertex attributes)
+    auto vertShaderCode = readFile("shaders/compiled/grid.vert.spv");
+    auto fragShaderCode = readFile("shaders/compiled/grid.frag.spv");
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -193,7 +184,7 @@ void GraphicsPipeline::createGridPipeline() {
 
     VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
-    // Vertex input - LineVertex format
+    // Vertex input - LineVertex format (position, color)
     auto bindingDescription = LineVertex::getBindingDescription();
     auto attributeDescriptions = LineVertex::getAttributeDescriptions();
 

@@ -296,17 +296,40 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     grid->bind(commandBuffer);
     grid->draw(commandBuffer);
 
+    // DEBUG: Print render queue size on first frame
+    static bool debugPrinted = false;
+    if (!debugPrinted) {
+        std::cout << "[Render] Queue size: " << renderQueue.size() << std::endl;
+    }
+
     // Draw all submitted meshes
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getMeshPipeline());
 
+    int drawCount = 0;
     for (const auto& obj : renderQueue) {
         if (obj.mesh) {
+            // DEBUG: Print each draw call info
+            if (!debugPrinted) {
+                std::cout << "[Render] Drawing mesh " << drawCount
+                    << " ptr=" << obj.mesh
+                    << " verts=" << obj.mesh->getVertexCount()
+                    << " indices=" << obj.mesh->getIndexCount()
+                    << " transform[3]=" << obj.transform[3][0] << "," << obj.transform[3][1] << "," << obj.transform[3][2]
+                    << std::endl;
+            }
+
             updateUniformBuffer(currentFrame, camera, obj.transform);
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                 pipeline->getMeshPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
             obj.mesh->bind(commandBuffer);
             obj.mesh->draw(commandBuffer);
+            drawCount++;
         }
+    }
+
+    if (!debugPrinted) {
+        std::cout << "[Render] Total draw calls: " << drawCount << std::endl;
+        debugPrinted = true;
     }
 
     vkCmdEndRenderPass(commandBuffer);
