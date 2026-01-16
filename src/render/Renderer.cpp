@@ -140,6 +140,10 @@ void Renderer::drawFrame(Camera* camera) {
     }
 
     vkResetFences(context->getDevice(), 1, &inFlightFences[currentFrame]);
+
+    // Update scene-wide uniform buffer ONCE per frame
+    updateUniformBuffer(currentFrame, camera);
+
     vkResetCommandBuffer(commandBuffers[currentFrame], 0);
     recordCommandBuffer(commandBuffers[currentFrame], imageIndex, camera);
 
@@ -185,9 +189,8 @@ void Renderer::drawFrame(Camera* camera) {
     clearSubmissions();
 }
 
-void Renderer::updateUniformBuffer(uint32_t currentImage, Camera* camera, const glm::mat4& model) {
+void Renderer::updateUniformBuffer(uint32_t currentImage, Camera* camera) {
     UniformBufferObject ubo{};
-    ubo.model = model;
     ubo.view = camera->getViewMatrix();
     ubo.projection = camera->getProjectionMatrix();
     ubo.lightDir = glm::normalize(glm::vec3(0.5f, 0.7f, 0.5f));
@@ -288,47 +291,53 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 
     VkDescriptorSet descriptorSet = uniformBuffer->getDescriptorSet(currentFrame);
 
-    // Draw grid
-    updateUniformBuffer(currentFrame, camera, glm::mat4(1.0f));
+    // ========================================
+    // DRAW GRID
+    // ========================================
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getGridPipeline());
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
         pipeline->getGridPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
+
+    PushConstants gridPush{};
+    gridPush.model = glm::mat4(1.0f);
+    vkCmdPushConstants(commandBuffer, pipeline->getGridPipelineLayout(),
+        VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &gridPush);
+
     grid->bind(commandBuffer);
     grid->draw(commandBuffer);
 
-    // DEBUG: Print render queue size on first frame
+    // ========================================
+    // DRAW MESHES
+    // ========================================
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getMeshPipeline());
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        pipeline->getMeshPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
+
     static bool debugPrinted = false;
     if (!debugPrinted) {
-        std::cout << "[Render] Queue size: " << renderQueue.size() << std::endl;
+        std::cout << "[Render] Drawing " << renderQueue.size() << " meshes" << std::endl;
     }
 
-    // Draw all submitted meshes
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getMeshPipeline());
-
-    int drawCount = 0;
     for (const auto& obj : renderQueue) {
         if (obj.mesh) {
-            // DEBUG: Print each draw call info
+            PushConstants push{};
+            push.model = obj.transform;
+            vkCmdPushConstants(commandBuffer, pipeline->getMeshPipelineLayout(),
+                VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &push);
+
             if (!debugPrinted) {
-                std::cout << "[Render] Drawing mesh " << drawCount
-                    << " ptr=" << obj.mesh
-                    << " verts=" << obj.mesh->getVertexCount()
-                    << " indices=" << obj.mesh->getIndexCount()
-                    << " transform[3]=" << obj.transform[3][0] << "," << obj.transform[3][1] << "," << obj.transform[3][2]
-                    << std::endl;
+                std::cout << "  - Mesh at ("
+                    << obj.transform[3][0] << ", "
+                    << obj.transform[3][1] << ", "
+                    << obj.transform[3][2] << ")" << std::endl;
             }
 
-            updateUniformBuffer(currentFrame, camera, obj.transform);
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                pipeline->getMeshPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
             obj.mesh->bind(commandBuffer);
             obj.mesh->draw(commandBuffer);
-            drawCount++;
         }
     }
 
     if (!debugPrinted) {
-        std::cout << "[Render] Total draw calls: " << drawCount << std::endl;
         debugPrinted = true;
     }
 

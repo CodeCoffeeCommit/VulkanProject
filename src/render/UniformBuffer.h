@@ -7,12 +7,14 @@
 
 class VulkanContext;
 
-// Scene-wide uniform data (doesn't change per-object)
+// Scene-wide uniform data (constant for entire frame)
 struct UniformBufferObject {
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 projection;
     alignas(16) glm::vec3 lightDir;
+    alignas(4)  float _pad1;
     alignas(16) glm::vec3 viewPos;
+    alignas(4)  float _pad2;
 };
 
 // Per-object data sent via push constants

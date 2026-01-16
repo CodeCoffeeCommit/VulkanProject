@@ -38,7 +38,6 @@ void GraphicsPipeline::cleanup() {
 }
 
 void GraphicsPipeline::createMeshPipeline() {
-    // FIXED: Use workbench shaders for mesh rendering (has lighting, expects 3 vertex attributes)
     auto vertShaderCode = readFile("shaders/compiled/workbench.vert.spv");
     auto fragShaderCode = readFile("shaders/compiled/workbench.frag.spv");
 
@@ -59,7 +58,6 @@ void GraphicsPipeline::createMeshPipeline() {
 
     VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
-    // Vertex input - use Vertex format (position, normal, color)
     auto bindingDescription = Vertex::getBindingDescription();
     auto attributeDescriptions = Vertex::getAttributeDescriptions();
 
@@ -70,7 +68,6 @@ void GraphicsPipeline::createMeshPipeline() {
     vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
-    // Input assembly - triangles
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -127,10 +124,18 @@ void GraphicsPipeline::createMeshPipeline() {
 
     VkDescriptorSetLayout setLayout = uniformBuffer->getDescriptorSetLayout();
 
+    // Push constant range for per-object model matrix
+    VkPushConstantRange pushConstantRange{};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(PushConstants);
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &setLayout;
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
     if (vkCreatePipelineLayout(context->getDevice(), &pipelineLayoutInfo, nullptr,
         &meshPipelineLayout) != VK_SUCCESS) {
@@ -160,10 +165,11 @@ void GraphicsPipeline::createMeshPipeline() {
 
     vkDestroyShaderModule(context->getDevice(), fragShaderModule, nullptr);
     vkDestroyShaderModule(context->getDevice(), vertShaderModule, nullptr);
+
+    std::cout << "[OK] Mesh pipeline created with push constants" << std::endl;
 }
 
 void GraphicsPipeline::createGridPipeline() {
-    // FIXED: Use grid shaders for line rendering (simple, expects 2 vertex attributes)
     auto vertShaderCode = readFile("shaders/compiled/grid.vert.spv");
     auto fragShaderCode = readFile("shaders/compiled/grid.frag.spv");
 
@@ -184,7 +190,6 @@ void GraphicsPipeline::createGridPipeline() {
 
     VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
-    // Vertex input - LineVertex format (position, color)
     auto bindingDescription = LineVertex::getBindingDescription();
     auto attributeDescriptions = LineVertex::getAttributeDescriptions();
 
@@ -195,7 +200,6 @@ void GraphicsPipeline::createGridPipeline() {
     vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
-    // Input assembly - LINES
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
@@ -252,10 +256,18 @@ void GraphicsPipeline::createGridPipeline() {
 
     VkDescriptorSetLayout setLayout = uniformBuffer->getDescriptorSetLayout();
 
+    // Grid also uses push constants
+    VkPushConstantRange pushConstantRange{};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(PushConstants);
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &setLayout;
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
     if (vkCreatePipelineLayout(context->getDevice(), &pipelineLayoutInfo, nullptr,
         &gridPipelineLayout) != VK_SUCCESS) {

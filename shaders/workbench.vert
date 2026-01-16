@@ -1,12 +1,17 @@
 #version 450
 
+// Scene-wide data (constant for entire frame)
 layout(binding = 0) uniform UniformBufferObject {
-    mat4 model;
     mat4 view;
     mat4 projection;
     vec3 lightDir;
     vec3 viewPos;
 } ubo;
+
+// Per-object data (changes every draw call)
+layout(push_constant) uniform PushConstants {
+    mat4 model;
+} push;
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
@@ -17,10 +22,10 @@ layout(location = 1) out vec3 fragNormal;
 layout(location = 2) out vec3 fragPos;
 
 void main() {
-    vec4 worldPos = ubo.model * vec4(inPosition, 1.0);
+    vec4 worldPos = push.model * vec4(inPosition, 1.0);
     gl_Position = ubo.projection * ubo.view * worldPos;
     
     fragPos = worldPos.xyz;
-    fragNormal = mat3(transpose(inverse(ubo.model))) * inNormal;
+    fragNormal = mat3(transpose(inverse(push.model))) * inNormal;
     fragColor = inColor;
 }

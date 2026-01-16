@@ -33,10 +33,12 @@ public:
     void drawFrame(Camera* camera);
     void waitIdle();
 
-    void submitMesh(Mesh* mesh, const glm::mat4& transform, const glm::vec3& color = glm::vec3(0.8f), bool selected = false);
+    void submitMesh(Mesh* mesh, const glm::mat4& transform,
+        const glm::vec3& color = glm::vec3(0.8f), bool selected = false);
     void clearSubmissions();
 
-    Mesh* getOrCreateMesh(uint64_t entityId, const void* vertexData, size_t vertexCount, const uint32_t* indexData, size_t indexCount);
+    Mesh* getOrCreateMesh(uint64_t entityId, const void* vertexData, size_t vertexCount,
+        const uint32_t* indexData, size_t indexCount);
     void removeMesh(uint64_t entityId);
 
     Grid* getGrid() { return grid; }
@@ -49,7 +51,7 @@ private:
     void createSceneObjects();
 
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, Camera* camera);
-    void updateUniformBuffer(uint32_t currentImage, Camera* camera, const glm::mat4& model);
+    void updateUniformBuffer(uint32_t currentImage, Camera* camera);
 
     VulkanContext* context = nullptr;
     SwapChain* swapChain = nullptr;
