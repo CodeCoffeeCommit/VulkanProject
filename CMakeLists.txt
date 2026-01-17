@@ -1,8 +1,8 @@
-﻿cmake_minimum_required(VERSION 3.16)
-set(CMAKE_TOOLCHAIN_FILE "C:/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "Vcpkg toolchain file")
+cmake_minimum_required(VERSION 3.16)
 project(LibreDCC)
 
 set(CMAKE_CXX_STANDARD 17)
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find packages
@@ -28,6 +28,8 @@ set(SHADER_SOURCES
     ${CMAKE_SOURCE_DIR}/shaders/workbench.frag
     ${CMAKE_SOURCE_DIR}/shaders/grid.vert
     ${CMAKE_SOURCE_DIR}/shaders/grid.frag
+    ${CMAKE_SOURCE_DIR}/shaders/ui.vert
+    ${CMAKE_SOURCE_DIR}/shaders/ui.frag
 )
 
 # Create compiled shaders output directory
@@ -65,9 +67,9 @@ add_executable(${PROJECT_NAME}
     src/core/InputManager.cpp
     src/core/InputManager.h
     src/core/CallbackData.h
-    src/core/Camera.h              # Now header-only (struct)
-    src/core/CameraController.h    # NEW: Base class
-    src/core/OrbitController.h     # NEW: Blender-style controller
+    src/core/Camera.h
+    src/core/CameraController.h
+    src/core/OrbitController.h
     src/core/Event.h
     src/core/Command.h
     src/core/Editor.cpp
@@ -84,6 +86,16 @@ add_executable(${PROJECT_NAME}
     
     # Components
     src/components/CoreComponents.h
+    
+    # UI
+    src/ui/Core.h
+    src/ui/Theme.h
+    src/ui/Renderer.h
+    src/ui/Renderer.cpp
+    src/ui/Widgets.h
+    src/ui/Widgets.cpp
+    src/ui/UI.h
+    src/ui/UI.cpp
     
     # Rendering
     src/render/VulkanContext.cpp
@@ -143,3 +155,5 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         "$<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders/compiled"
     COMMENT "Copying shaders to output directory"
 )
+
+
