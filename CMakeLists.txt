@@ -64,9 +64,10 @@ add_executable(${PROJECT_NAME}
     src/core/Window.h
     src/core/InputManager.cpp
     src/core/InputManager.h
-    src/core/CallbackData.h          
-    src/core/Camera.cpp
-    src/core/Camera.h
+    src/core/CallbackData.h
+    src/core/Camera.h              # Now header-only (struct)
+    src/core/CameraController.h    # NEW: Base class
+    src/core/OrbitController.h     # NEW: Blender-style controller
     src/core/Event.h
     src/core/Command.h
     src/core/Editor.cpp
@@ -101,7 +102,7 @@ add_executable(${PROJECT_NAME}
     src/render/Primitives.h
     src/render/UniformBuffer.cpp
     src/render/UniformBuffer.h
- "src/core/CallbackData.h")
+)
 
 # Make sure shaders are built before the main executable
 add_dependencies(${PROJECT_NAME} Shaders)

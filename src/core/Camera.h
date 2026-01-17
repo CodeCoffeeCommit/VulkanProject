@@ -5,62 +5,45 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-class Camera {
-public:
-    Camera();
-    ~Camera() = default;
+/**
+ * Camera - Pure data struct representing camera state
+ *
+ * The Camera itself has no behavior - it's just data.
+ * CameraController subclasses manipulate this data based on input.
+ * This separation allows different control schemes (orbit, fly, turntable)
+ * to all work with the same Camera struct.
+ */
+struct Camera {
+    // Position and orientation
+    glm::vec3 position{ 0.0f, 5.0f, 10.0f };
+    glm::vec3 target{ 0.0f, 0.0f, 0.0f };
+    glm::vec3 up{ 0.0f, 1.0f, 0.0f };
 
-    // Update matrices
-    void update();
-    
-    // Blender-style orbit controls
-    void orbit(float deltaX, float deltaY);
-    void pan(float deltaX, float deltaY);
-    void zoom(float delta);
-    
-    // Reset to default view
-    void reset();
-    void setFront();
-    void setRight();
-    void setTop();
-    
-    // Getters
+    // Projection settings
+    float fov = 45.0f;
+    float nearPlane = 0.1f;
+    float farPlane = 1000.0f;
+    float aspectRatio = 16.0f / 9.0f;
+
+    // Computed matrices (updated by controller or manually)
+    glm::mat4 viewMatrix{ 1.0f };
+    glm::mat4 projectionMatrix{ 1.0f };
+
+    // Recompute matrices from current state
+    void updateMatrices() {
+        viewMatrix = glm::lookAt(position, target, up);
+        projectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane);
+        projectionMatrix[1][1] *= -1; // Flip Y for Vulkan
+    }
+
+    // Convenience getters (for compatibility with existing code)
     glm::mat4 getViewMatrix() const { return viewMatrix; }
     glm::mat4 getProjectionMatrix() const { return projectionMatrix; }
     glm::vec3 getPosition() const { return position; }
     glm::vec3 getTarget() const { return target; }
-    
-    // Set aspect ratio (call on resize)
-    void setAspectRatio(float aspect);
-    
-    // Camera settings
-    float fov = 45.0f;
-    float nearPlane = 0.1f;
-    float farPlane = 1000.0f;
-    
-private:
-    void updatePosition();
-    
-    // Orbit parameters (spherical coordinates)
-    float distance = 10.0f;
-    float azimuth = 45.0f;    // Horizontal angle (degrees)
-    float elevation = 30.0f;   // Vertical angle (degrees)
-    
-    // Target point (what camera looks at)
-    glm::vec3 target = glm::vec3(0.0f, 0.0f, 0.0f);
-    
-    // Computed values
-    glm::vec3 position;
-    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-    
-    // Matrices
-    glm::mat4 viewMatrix;
-    glm::mat4 projectionMatrix;
-    
-    float aspectRatio = 16.0f / 9.0f;
-    
-    // Sensitivity
-    float orbitSensitivity = 0.5f;
-    float panSensitivity = 0.01f;
-    float zoomSensitivity = 1.0f;
+
+    void setAspectRatio(float aspect) {
+        aspectRatio = aspect;
+        updateMatrices();
+    }
 };

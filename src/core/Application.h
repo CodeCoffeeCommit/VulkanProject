@@ -3,11 +3,12 @@
 #include "Window.h"
 #include "InputManager.h"
 #include "Camera.h"
+#include "CameraController.h"
 #include "../render/VulkanContext.h"
 #include <memory>
 #include <chrono>
 
-// Forward declarations instead of includes to avoid circular dependencies
+// Forward declarations
 class SwapChain;
 class Renderer;
 
@@ -42,7 +43,10 @@ private:
     std::unique_ptr<Window> window;
     std::unique_ptr<InputManager> inputManager;
     std::unique_ptr<VulkanContext> vulkanContext;
+
+    // Camera system (separated: data + controller)
     std::unique_ptr<Camera> camera;
+    std::unique_ptr<CameraController> cameraController;
 
     // Rendering components
     std::unique_ptr<SwapChain> swapChain;
@@ -53,13 +57,10 @@ private:
     float deltaTime = 0.0f;
     float fps = 0.0f;
 
-    // Mouse state for camera control
-    bool middleMouseDown = false;
+    // Input state for non-camera controls
     bool shiftHeld = false;
     bool ctrlHeld = false;
     bool altHeld = false;
-    double lastMouseX = 0.0;
-    double lastMouseY = 0.0;
 
     // Resize tracking
     bool framebufferResized = false;

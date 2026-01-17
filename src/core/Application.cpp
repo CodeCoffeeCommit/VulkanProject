@@ -1,10 +1,12 @@
 #include "Application.h"
 #include "Editor.h"
 #include "Selection.h"
+#include "OrbitController.h"
 #include "../render/SwapChain.h"
 #include "../render/Renderer.h"
 #include "../render/Mesh.h"
 #include "../world/Primitives.h"
+#include "../components/CoreComponents.h"
 #include <iostream>
 
 Application::Application() {
@@ -30,8 +32,13 @@ void Application::init() {
 
     libre::Editor::instance().initialize();
 
+    // Create camera (pure data) and controller (behavior)
     camera = std::make_unique<Camera>();
     camera->setAspectRatio(static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT));
+
+    // OrbitController provides Blender-style navigation
+    // Future: Can swap to TurntableController, FlyController, etc.
+    cameraController = std::make_unique<OrbitController>(camera.get());
 
     vulkanContext = std::make_unique<VulkanContext>(window.get());
     vulkanContext->init();
@@ -113,7 +120,7 @@ void Application::handleResize() {
     // Update camera aspect ratio
     camera->setAspectRatio(static_cast<float>(width) / static_cast<float>(height));
 
-    // Recreate swap chain (this also recreates framebuffers)
+    // Recreate swap chain
     swapChain->recreate(window->getHandle());
 
     // Renderer needs to know about new swap chain
@@ -133,11 +140,11 @@ void Application::mainLoop() {
         // Poll events first
         window->pollEvents();
 
-        // FIXED: Check for resize BEFORE rendering
+        // Check for resize BEFORE rendering
         if (window->wasResized() || framebufferResized) {
             window->resetResizeFlag();
             handleResize();
-            continue;  // Skip this frame, start fresh
+            continue;
         }
 
         // Skip rendering if minimized
@@ -151,7 +158,7 @@ void Application::mainLoop() {
         // Update game state
         update(deltaTime);
 
-        // Render - may set framebufferResized if swap chain is out of date
+        // Render
         render();
 
         // Update input state for next frame
@@ -165,6 +172,7 @@ void Application::mainLoop() {
 void Application::processInput(float dt) {
     auto& editor = libre::Editor::instance();
 
+    // Exit
     if (inputManager->isKeyPressed(GLFW_KEY_ESCAPE)) {
         glfwSetWindowShouldClose(window->getHandle(), GLFW_TRUE);
     }
@@ -199,6 +207,7 @@ void Application::processInput(float dt) {
         framebufferResized = true;
     }
 
+    // Track modifier keys (for non-camera input)
     shiftHeld = inputManager->isKeyPressed(GLFW_KEY_LEFT_SHIFT) ||
         inputManager->isKeyPressed(GLFW_KEY_RIGHT_SHIFT);
     ctrlHeld = inputManager->isKeyPressed(GLFW_KEY_LEFT_CONTROL) ||
@@ -206,6 +215,7 @@ void Application::processInput(float dt) {
     altHeld = inputManager->isKeyPressed(GLFW_KEY_LEFT_ALT) ||
         inputManager->isKeyPressed(GLFW_KEY_RIGHT_ALT);
 
+    // Undo/Redo
     if (ctrlHeld && inputManager->isKeyJustPressed(GLFW_KEY_Z)) {
         if (shiftHeld) {
             editor.redo();
@@ -217,11 +227,13 @@ void Application::processInput(float dt) {
         }
     }
 
+    // Delete selected
     if (inputManager->isKeyJustPressed(GLFW_KEY_DELETE) ||
         inputManager->isKeyJustPressed(GLFW_KEY_X)) {
         editor.deleteSelected();
     }
 
+    // Selection shortcuts
     if (inputManager->isKeyJustPressed(GLFW_KEY_A)) {
         if (altHeld) {
             editor.deselectAll();
@@ -231,47 +243,16 @@ void Application::processInput(float dt) {
         }
     }
 
-    if (inputManager->isKeyJustPressed(GLFW_KEY_KP_1)) camera->setFront();
-    if (inputManager->isKeyJustPressed(GLFW_KEY_KP_3)) camera->setRight();
-    if (inputManager->isKeyJustPressed(GLFW_KEY_KP_7)) camera->setTop();
-    if (inputManager->isKeyJustPressed(GLFW_KEY_KP_0)) camera->reset();
-
+    // Selection with left click (only when middle mouse not held)
     if (inputManager->isMouseButtonJustPressed(GLFW_MOUSE_BUTTON_LEFT)) {
-        if (!middleMouseDown) {
+        // Check if middle mouse is being used for camera
+        if (!inputManager->isMouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE)) {
             handleSelection();
         }
     }
 
-    if (inputManager->isMouseButtonJustPressed(GLFW_MOUSE_BUTTON_MIDDLE)) {
-        middleMouseDown = true;
-        lastMouseX = inputManager->getMouseX();
-        lastMouseY = inputManager->getMouseY();
-    }
-    if (inputManager->isMouseButtonJustReleased(GLFW_MOUSE_BUTTON_MIDDLE)) {
-        middleMouseDown = false;
-    }
-
-    if (middleMouseDown) {
-        double currentX = inputManager->getMouseX();
-        double currentY = inputManager->getMouseY();
-        float deltaX = static_cast<float>(currentX - lastMouseX);
-        float deltaY = static_cast<float>(currentY - lastMouseY);
-
-        if (shiftHeld) {
-            camera->pan(deltaX, deltaY);
-        }
-        else {
-            camera->orbit(deltaX, deltaY);
-        }
-
-        lastMouseX = currentX;
-        lastMouseY = currentY;
-    }
-
-    double scrollY = inputManager->getScrollY();
-    if (scrollY != 0.0) {
-        camera->zoom(static_cast<float>(scrollY));
-    }
+    // === Camera Controller handles all camera input ===
+    cameraController->processInput(inputManager.get(), dt);
 }
 
 void Application::handleSelection() {
@@ -385,7 +366,8 @@ void Application::syncECSToRenderer() {
         );
 
         bool selected = world.isSelected(id);
-        glm::vec3 color = selected ? glm::vec3(1.0f, 0.6f, 0.2f) : render->baseColor;
+        glm::vec3 color = selected ?
+            glm::vec3(1.0f, 0.6f, 0.2f) : render->baseColor;
 
         renderer->submitMesh(gpuMesh, transform->worldMatrix, color, selected);
         entityCount++;
@@ -418,6 +400,7 @@ void Application::cleanup() {
         vulkanContext.reset();
     }
 
+    cameraController.reset();
     camera.reset();
     inputManager.reset();
     window.reset();
